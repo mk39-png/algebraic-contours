@@ -15,13 +15,51 @@ This algorithm takes an input mesh and camera viewpoint, approximates the mesh w
 To install this project on a Unix-based system, use the following standard CMake build procedure:
 
 ```bash
-git clone https://github.com/rjc8237/algebraic-contours.git
+git clone https://github.com/mk39-png/algebraic-contours.git
 cd algebraic-contours
 mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j 8
 ```
+
+## Dependencies 
+For installing depenedencies on a fresh Linux install, use the following procedure:
+
+```bash
+# This installs all the dependencies on a new machine 
+sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    wget \
+    ca-certificates \
+    gnupg \
+    software-properties-common \
+    pkg-config \
+    libeigen3-dev \
+    libspdlog-dev \
+    libsuitesparse-dev \
+    libgl1-mesa-dev \
+    libglfw3-dev \
+    libxrandr-dev \
+    libxinerama-dev \
+    libxcursor-dev \
+    libxi-dev \
+    xvfb \
+    x11-apps
+
+# Install CMake to build
+# Change to /tmp directory to temporarily store the CMake 3.29.9 install
+cd /tmp
+# download installation script
+sudo wget https://github.com/Kitware/CMake/releases/download/v3.29.9/cmake-3.29.9-linux-x86_64.sh 
+# Remove script now that we have installed cmake
+sudo rm cmake-3.29.9-linux-x86_64.sh
+
+# Add CMake to path now
+export PATH=/usr/local/bin/cmake:$PATH
+```
+
 
 ## Usage
 
