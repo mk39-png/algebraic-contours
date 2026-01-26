@@ -51,8 +51,10 @@ sudo apt-get update && sudo apt-get install -y --no-install-recommends \
 # Install CMake to build
 # Change to /tmp directory to temporarily store the CMake 3.29.9 install
 cd /tmp
-# download installation script
-sudo wget https://github.com/Kitware/CMake/releases/download/v3.29.9/cmake-3.29.9-linux-x86_64.sh 
+# Download installation script
+sudo wget https://github.com/Kitware/CMake/releases/download/v3.29.9/cmake-3.29.9-linux-x86_64.sh
+# Run installation script
+sudo ./cmake-3.29.9-linux-x86_64.sh
 # Remove script now that we have installed cmake
 sudo rm cmake-3.29.9-linux-x86_64.sh
 
