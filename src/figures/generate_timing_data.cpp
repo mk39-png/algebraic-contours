@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
                                      std::ios::app);
   out_view_independent << input_filename << "," << F.rows() << ","
                        << spline_surface_time << ","
-                       << compute_patch_boundary_time << ",\n";
+                       << compute_patch_boundary_time << "\n";
                     
   // Write view dependent timing data
   std::ofstream out_per_view(join_path(output_dir, "per_view.csv"), std::ios::app);
@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
                << contour_network.boundary_cusp_number << ","
                << contour_network.intersection_call << ","
                << contour_network.ray_intersection_call << ","
-               << spline_surface.num_patches() << ",\n";
+               << spline_surface.num_patches() << "\n";
 
   // Generate a random number generator for angles
   std::mt19937 e2(0);
@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
                  << contour_network.boundary_cusp_number << ","
                  << contour_network.intersection_call << ","
                  << contour_network.ray_intersection_call << ","
-                 << spline_surface.num_patches() << ",\n";
+                 << spline_surface.num_patches() << "\n";
   }
 
   // Close output files

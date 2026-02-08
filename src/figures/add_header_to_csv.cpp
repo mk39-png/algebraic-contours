@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
   std::ofstream out_per_view(join_path(output_dir, "per_view.csv"), std::ios::app);
 
   out_view_independent << "mesh name, num triangles, time spline surface, time "
-                          "patch boundary edges,\n";
+                          "patch boundary edges\n";
   out_per_view
       << "mesh name, rotation matrix, total time per view, surface update, "
          "compute contour, compute cusps, compute intersections, compute "
