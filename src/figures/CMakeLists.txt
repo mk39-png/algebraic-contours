@@ -69,3 +69,24 @@ target_link_libraries(generate_timing_data PRIVATE
 target_compile_options(generate_timing_data PRIVATE
   -Wall -Wpedantic -Wextra -Werror
 )
+
+# 
+# New experiment executables
+# 
+add_executable(generate_timing_metrics generate_timing_metrics.cpp)
+target_link_libraries(generate_timing_metrics PRIVATE 
+  QuadraticContoursLib
+  CLI11::CLI11
+)
+target_compile_options(generate_timing_metrics PRIVATE
+  -Wall -Wpedantic -Wextra -Werror
+)
+
+add_executable(generate_similarity_metrics generate_similarity_metrics.cpp)
+target_link_libraries(generate_similarity_metrics PRIVATE
+  QuadraticContoursLib
+  CLI11::CLI11
+)
+target_compile_options(generate_similarity_metrics PRIVATE
+  -Wall -Wpedantic -Wextra -Werror
+)
