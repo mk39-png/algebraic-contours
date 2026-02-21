@@ -45,6 +45,18 @@ public:
   /// @param[in] patches: quadratic surface patches
   QuadraticSplineSurface(std::vector<QuadraticSplineSurfacePatch>& patches);
 
+  // 
+  // TEST METHODS
+  // 
+  std::string serialize_vector_patch_to_json_str() const;
+  std::string serialize_to_json_str() const;
+  void serialize_to_json_file(std::string filename) const;
+
+
+  // 
+  // END OF TEST METHODS
+  // 
+
   /// Get the number of patches in the surface
   ///
   /// @return number of patches

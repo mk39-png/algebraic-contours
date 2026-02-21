@@ -6,6 +6,7 @@
 #include "common.h"
 #include "line_segment.h"
 
+
 /// Representation of a convex polygon in R^2 that supports containment queries,
 /// sampling, boundary segments and vertices computation, triangulation, and
 /// boundary parametrization.
@@ -18,6 +19,14 @@ public:
     const std::array<Eigen::Matrix<double, 3, 1>, 3>& boundary_segments_coeffs);
 
   ConvexPolygon(const Eigen::Matrix<double, 3, 2>& vertices);
+
+  // 
+  // TESTING
+  // 
+  std::string serialize_to_json_string() const;
+  // 
+  // END OF TESTING
+  // 
 
   // TODO Implement constructor from collection of points
 

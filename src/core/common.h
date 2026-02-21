@@ -5,6 +5,8 @@
 
 // #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_OFF
 
+#include <filesystem>
+
 #include "autodiff.h"
 
 #include "polyscope/polyscope.h"
@@ -25,6 +27,7 @@
 #include <math.h>
 #include <sstream>
 #include <vector>
+// #include <filesystem>
 
 #include <igl/is_edge_manifold.h>
 #include <igl/is_vertex_manifold.h>
@@ -85,6 +88,1038 @@ const Eigen::Matrix<double, 3, 1> GOLD_YELLOW(0.670, 0.673, 0.292);
 
 // Algebraic constrained values
 const int MAX_PATCH_RAY_INTERSECTIONS = 4;
+
+
+
+
+
+// ***********************
+// std::ofstream initialize_output_file(const std::string& filename) {
+//   std::ofstream outfile(filename, std::ios::out | std::ios::trunc);
+
+//   if (!outfile.is_open()) {
+//     throw std::runtime_error("Could not open file: " + filename);
+//   }
+
+//   return outfile;
+// }
+
+
+// ***********************
+//  MY FUNCTIONS
+// ***********************
+// For writing to a particular mesh and its camera subfolder
+// namespace Paths {
+//   void initialize(const std::string &mesh_filename, const std::string &camera_filename);
+//   // inline std::filesystem::path &root;
+//   const std::filesystem::path &root(); 
+
+//   std::filesystem::path function_dir(const std::string &function_name);
+// }
+
+// namespace {
+  // std::filesystem::path g_root_mesh_name;
+  // std::string g_camera_name;
+// }
+
+// Define each of the functions of the namespace
+namespace Paths
+{   
+    inline std::filesystem::path g_root;
+    // inline std::string g_camera_name;
+
+    // Initialize the global variables of the namespace
+    inline void initialize(const std::string &mesh_filename,
+                    const std::string &camera_filename)
+    {
+        // g_camera_name = camera_filename;
+        // e.g. "data/spot_control/camera_identity/"
+        g_root =
+            std::filesystem::path("test_data/") / 
+            std::filesystem::path(mesh_filename).stem() / // e.g. "spot_control/"
+            std::filesystem::path(camera_filename).stem(); // e.g. "camera_identity/"
+
+        std::filesystem::create_directories(g_root);
+    }
+
+    // Getter function. Retrieve the root folder (i.e. mesh folder) 
+    inline const std::filesystem::path& root()
+    {
+        return g_root;
+    }
+
+    // Creates directory path
+    inline std::filesystem::path function_dir(const std::string &function_name)
+    {
+        std::filesystem::path dir = g_root / function_name;
+        std::filesystem::create_directories(dir);
+        return dir;
+    }
+}
+
+// Takes in a filestream for functions with multiple calls to the same function.
+// If that makes sense.
+inline void serialize_array(std::string filename, double data[6]) {
+    
+    spdlog::info("Writing array data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    // Check if file exists. 
+    // If yes, then append number to filename.
+    // if (std::filesystem::exists(filename)) {
+    //   std::filesystem::path p(filename);
+    //   filename = p.stem(;
+    // }
+
+
+    int prec = 17;
+
+    for (size_t i = 0; i < 6; ++i) {
+      output_file << std::setprecision(prec) << data[i];
+
+      // do not put trailing comma 
+      if (i + 1 < 6) {
+        output_file <<  ", ";
+      } 
+    }
+    output_file << std::endl;
+
+    // TODO: what if we didn't close this file?
+    // Like, whati f serializing the same file and whatnot?
+    output_file.close();
+}
+
+
+
+inline void serialize_array_array_matrix(std::string filename, 
+  std::array<std::array<Eigen::Matrix<double, 3, 1>, 3>, 12>  data) {
+    
+    // NOTE: used only to serialize patch_boundaries....
+    // cols == 1
+    // rows == 3
+
+    spdlog::info("Writing array data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    for (size_t i = 0; i < 12; ++i) { // length 12
+      // std::array temp_inner = data[i]; // inner array of length 3
+      for (size_t j = 0; j < 3; ++j) { // length 3
+          // loop through inner array, print to file
+          const Eigen::Matrix<double, 3, 1>& temp_vec = data[i][j];
+          output_file << std::setprecision(prec) << temp_vec[0] << "," << temp_vec[1] << "," << temp_vec[2] << std::endl;
+      }
+      // Separate array<Eigen::Matrix<double, 3, 1>, 3> into their own "chunks". Double newline.
+      output_file << std::endl;
+    }
+    output_file.close();
+}
+
+
+template<typename T>
+inline void serialize_vector_vector(std::string filename, std::vector<std::vector<T>> vect_vect) {
+    spdlog::info("Writing vector vector data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    for (size_t i = 0; i < vect_vect.size(); ++i) {
+      // Making sure that the first element is not empty before accessing it.
+      if (vect_vect.at(i).size() > 0) {
+        output_file << std::setprecision(prec) << vect_vect.at(i).at(0); // this would be elem 0
+      }
+      for (size_t j = 1; j < vect_vect.at(i).size(); ++j) {
+          output_file << std::setprecision(prec) << "," << vect_vect.at(i).at(j);
+      }
+      output_file << std::endl;
+    }
+    output_file.close();
+}
+
+
+// Used for quadratic spline surface serialization
+template<typename T>
+inline std::string serialize_vector_vector_pair_to_json_str(
+  std::vector<std::vector<std::pair<T, T>>> vect_vect) {
+
+    std::stringstream output_stream;
+    int prec = 17;
+
+    // Loop through outer vector
+    output_stream << "[";
+    for (size_t i = 0; i < vect_vect.size(); ++i) {
+
+        // Loop through inner vector
+        const std::vector<std::pair<T, T>> vect = vect_vect.at(i);
+        output_stream << "[";
+        for (size_t j = 0; j < vect.size(); ++j) {
+          output_stream << std::setprecision(prec) << "[" << vect.at(j).first << "," << vect.at(j).second << "]";
+
+          // for the inner internal elements, comma placement
+          if (j < (vect.size() - 1)) { 
+            output_stream << ",";
+          } 
+        }
+        output_stream << "]";
+        
+        // for the internal vectors, comma placement
+        if (i < (vect_vect.size() - 1)) {
+          output_stream << ",";
+        }
+    }
+    output_stream << "]";
+    return output_stream.str();
+}
+
+
+template<typename T, size_t arr_len>
+inline void serialize_array_pair(std::string filename, std::array<std::pair<T, T>, arr_len> data) {
+    spdlog::info("Writing vector data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (size_t i = 0; i < arr_len; ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        output_file << std::setprecision(prec) << data[i].first << "," << data[i].second << std::endl;
+    }
+    // output_file << std::endl;
+    output_file.close();
+}
+
+inline void serialize_array_2x2(std::string filename, double data[2][2]) {
+    spdlog::info("Writing vector data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (size_t i = 0; i < 2; ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        output_file << std::setprecision(prec) << data[i][0] << "," << data[i][1] << std::endl;
+    }
+    output_file.close();
+}
+
+
+
+inline void serialize_array_5x3(std::string filename, double data[5][3]) {
+    spdlog::info("Writing vector data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (size_t i = 0; i < 5; ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        output_file << std::setprecision(prec) << data[i][0] << "," << data[i][1] << "," << data[i][2] << std::endl;
+    }
+    output_file.close();
+}
+
+inline void serialize_array_4(std::string filename, std::array<double, 4> data) {
+    spdlog::info("Writing vector data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+    output_file << std::setprecision(prec) << data[0] << "," << data[1] << "," << data[2] << "," << data[3] << std::endl;
+    output_file.close();
+}
+
+
+inline void serialize_array_3(std::string filename, double data[3]) {
+    spdlog::info("Writing vector data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+    output_file << std::setprecision(prec) << data[0] << "," << data[1] << "," << data[2] << std::endl;
+    output_file.close();
+}
+
+
+
+
+inline void serialize_array_2(std::string filename, double data[2]) {
+    spdlog::info("Writing vector data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+    output_file << std::setprecision(prec) << data[0] << "," << data[1] << std::endl;
+    output_file.close();
+}
+
+
+// template<typename T>
+// inline void serialize_array(std::string filename, std::array<T, 3> data) {
+//     spdlog::info("Writing vector data to {}", filename);
+//     std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+//     int prec = 17;
+
+//     // Print out by row order
+//     output_file << std::setprecision(prec) << data[0];
+//     for (long unsigned int i = 1; i < 3; ++i) {
+//         // Printing out the first element of the row separately since we do not want the comma at the start
+//         output_file << std::setprecision(prec) << "," << data[i];
+//     }
+//     output_file << std::endl;
+//     output_file.close();
+// }
+
+inline void serialize_array_eigen_vector_d(std::string filename, std::array<PlanarPoint, MAX_PATCH_RAY_INTERSECTIONS> data) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (long unsigned int i = 0; i < MAX_PATCH_RAY_INTERSECTIONS; ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        PlanarPoint& temp = data[i];
+        output_file << std::setprecision(prec) << temp[0] << ", " << temp[1] << std::endl;
+    }
+    output_file.close();
+}
+
+
+inline void serialize_array_eigen_vector_d(std::string filename, std::array<Eigen::VectorXd, 3> data) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (long unsigned int i = 0; i < 3; ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        Eigen::VectorXd& temp = data[i];
+        for (Eigen::Index j = 0; j < temp.rows(); ++j) {
+            // we print first element since we dont want comma before it (i.e. to the left)
+            output_file << std::setprecision(prec) << temp(j, 0);
+
+            for (Eigen::Index k = 1; k < temp.cols(); ++k) {
+              output_file << std::setprecision(prec) << "," << temp(j, k);
+            }
+
+            output_file << std::endl;
+        }
+        output_file << std::endl; // double newline between matrices
+    }
+
+    output_file.close();
+}
+
+
+inline void serialize_vector_triplets(std::string filename, std::vector<Eigen::Triplet<double>> hessian_entries) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+    int prec = 17;
+
+    for (const auto& triplet : hessian_entries) {
+      output_file << std::setprecision(prec) << triplet.row() << "," << triplet.col() << "," << triplet.value() << std::endl;
+    }
+
+    output_file.close();
+}
+
+
+inline void serialize_vector_array_matrix_d(std::string filename, std::vector<std::array<Matrix2x3r, 3>> data) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (size_t l = 0; l < data.size(); ++l) {
+      std::array<Matrix2x3r, 3> outer_temp = data.at(l);
+
+      for (long unsigned int i = 0; i < 3; ++i) {
+          // Printing out the first element of the row separately since we do not want the comma at the start
+          Matrix2x3r& temp = outer_temp[i];
+          for (Eigen::Index j = 0; j < temp.rows(); ++j) {
+              // we print first element since we dont want comma before it (i.e. to the left)
+              output_file << std::setprecision(prec) << temp(j, 0);
+
+              for (Eigen::Index k = 1; k < temp.cols(); ++k) {
+                output_file << std::setprecision(prec) << "," << temp(j, k);
+              }
+
+              output_file << std::endl; // newline between rows of Matrix2x3r
+          }
+          output_file << std::endl; // newline between each Matrix2x3r
+      }
+      output_file << std::endl; // newline between array<Matrix2x3r>
+    }
+    output_file.close();
+}
+
+
+/// ********************************
+/// FLOOD OF SAME OVERRRIDEN FUNCTION
+/// ********************************
+inline void serialize_array_matrix_d(std::string filename, std::array<Matrix2x3r, 3> data) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (long unsigned int i = 0; i < 3; ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        Matrix2x3r& temp = data[i];
+        for (Eigen::Index j = 0; j < temp.rows(); ++j) {
+            // we print first element since we dont want comma before it (i.e. to the left)
+            output_file << std::setprecision(prec) << temp(j, 0);
+
+            for (Eigen::Index k = 1; k < temp.cols(); ++k) {
+              output_file << std::setprecision(prec) << "," << temp(j, k);
+            }
+
+            output_file << std::endl;
+        }
+        output_file << std::endl; // double newline between matrices
+    }
+
+    output_file.close();
+}
+
+
+
+inline void serialize_array_matrix_d(std::string filename, std::array<Matrix2x2r, 3> data) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (long unsigned int i = 0; i < 3; ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        Matrix2x2r& temp = data[i];
+        for (Eigen::Index j = 0; j < temp.rows(); ++j) {
+            // we print first element since we dont want comma before it (i.e. to the left)
+            output_file << std::setprecision(prec) << temp(j, 0);
+
+            for (Eigen::Index k = 1; k < temp.cols(); ++k) {
+              output_file << std::setprecision(prec) << "," << temp(j, k);
+            }
+
+            output_file << std::endl;
+        }
+        output_file << std::endl; // double newline between matrices
+    }
+
+    output_file.close();
+}
+
+inline std::string serialize_array_matrix_d_to_json_str(std::array<Eigen::Matrix<double, 3, 1>, 3> M) {
+    std::stringstream output_stream;
+
+    int prec = 17;
+
+    output_stream << "[";
+    for (size_t k = 0; k < 3; ++k) {
+      // Print out by row order
+
+      output_stream << "[";
+      for (Eigen::Index i = 0; i < M[k].rows(); ++i) {
+
+          output_stream << "[";
+          for (Eigen::Index j = 0; j < M[k].cols(); ++j) {
+              output_stream << std::setprecision(prec) << M[k](i, j);
+          
+              // Ensuring not putting a comma on the last element in the row as to avoid trailing commas
+              if (j < (M[k].cols() - 1)) {
+                output_stream << ",";
+              }
+            }
+          output_stream << "]";
+
+          // Dont want a comma on the last inner array
+          if (i < (M[k].rows() - 1)) {
+              output_stream << ", ";
+          }
+        }
+        output_stream << "]";
+
+
+        // Now, put a thing between
+        if (k < 2) {
+          output_stream << ",";
+        }
+    }
+    output_stream << "]";
+
+    return output_stream.str();
+
+}
+
+
+
+inline void serialize_array_matrix_d(std::string filename, std::array<Eigen::MatrixXd, 3> data) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (long unsigned int i = 0; i < 3; ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        Eigen::MatrixXd& temp = data[i];
+        for (Eigen::Index j = 0; j < temp.rows(); ++j) {
+            // we print first element since we dont want comma before it (i.e. to the left)
+            output_file << std::setprecision(prec) << temp(j, 0);
+
+            for (Eigen::Index k = 1; k < temp.cols(); ++k) {
+              output_file << std::setprecision(prec) << "," << temp(j, k);
+            }
+
+            output_file << std::endl;
+        }
+        output_file << std::endl; // double newline between matrices
+    }
+
+    output_file.close();
+}
+
+inline void serialize_array_matrix_d(std::string filename, std::array<PlanarPoint, 3> data) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (long unsigned int i = 0; i < 3; ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        PlanarPoint& temp = data[i];
+        for (Eigen::Index j = 0; j < temp.rows(); ++j) {
+            // we print first element since we dont want comma before it (i.e. to the left)
+            output_file << std::setprecision(prec) << temp(j, 0);
+
+            for (Eigen::Index k = 1; k < temp.cols(); ++k) {
+              output_file << std::setprecision(prec) << "," << temp(j, k);
+            }
+
+            output_file << std::endl;
+        }
+        output_file << std::endl; // double newline between matrices
+    }
+
+    output_file.close();
+}
+
+
+inline void serialize_array_matrix_d(std::string filename, std::array<SpatialVector, 3> data) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (long unsigned int i = 0; i < 3; ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        SpatialVector& temp = data[i];
+        for (Eigen::Index j = 0; j < temp.rows(); ++j) {
+            // we print first element since we dont want comma before it (i.e. to the left)
+            output_file << std::setprecision(prec) << temp(j, 0);
+
+            for (Eigen::Index k = 1; k < temp.cols(); ++k) {
+              output_file << std::setprecision(prec) << "," << temp(j, k);
+            }
+
+            output_file << std::endl;
+        }
+        output_file << std::endl; // double newline between matrices
+    }
+
+    output_file.close();
+}
+
+/// *****************************************
+/// END OF FLOOD OF SAME OVERRRIDEN FUNCTION
+/// *****************************************
+inline void serialize_vector_array_spatialvector_3(std::string filename, std::vector<std::array<SpatialVector, 3>> data) {
+    spdlog::info("Writing array data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // This is gonna be 3d parsing
+    // ends up being Nx3x3 shape in NumPy.
+    for (const auto& arr : data) {
+      for (size_t j = 0; j < 3; ++j) {
+          const SpatialVector& sub_vec = arr[j];
+          output_file << std::setprecision(prec) << sub_vec[0] << "," << sub_vec[1] << "," << sub_vec[2] << std::endl;
+      }
+      output_file << std::endl;
+    }
+    output_file.close();
+}
+
+
+
+inline void serialize_vector_array_int_2(std::string filename, std::vector<std::array<int, 2>> data) {
+    spdlog::info("Writing array data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    for (const auto& arr : data) {
+      output_file << std::setprecision(prec) << arr[0];
+      for (unsigned int j = 1; j < 2; ++j) {
+          output_file << std::setprecision(prec) << "," << arr[j];
+      }
+      output_file << std::endl;
+    }
+    output_file.close();
+}
+
+// Supports any size length...
+template<typename T, size_t length>
+inline void serialize_vector_array_int(std::string filename, std::vector<std::array<T, length>> data) {
+    spdlog::info("Writing array data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    for (const auto& arr : data) {
+      output_file << std::setprecision(prec) << arr[0];
+      for (unsigned int j = 1; j < length; ++j) {
+          output_file << std::setprecision(prec) << "," << arr[j];
+      }
+      output_file << std::endl;
+    }
+    output_file.close();
+}
+
+template <size_t degree, size_t dimension>
+inline void serialize_vector_matrix_d(std::string filename, std::vector<Eigen::Matrix<double, degree, dimension>> M) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (long unsigned int i = 0; i < M.size(); ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        const Eigen::Matrix<double, degree, dimension>& temp = M.at(i);
+        for (Eigen::Index j = 0; j < M.at(i).rows(); ++j) {
+            // we print first element since we dont want comma before it (i.e. to the left)
+            output_file << std::setprecision(prec) << temp(j, 0);
+
+            for (Eigen::Index k = 1; k < M.at(i).cols(); ++k) {
+              output_file << std::setprecision(prec) << "," << temp(j, k);
+            }
+
+            output_file << std::endl;
+        }
+        output_file << std::endl; // double newline between matrices
+    }
+
+    output_file.close();
+}
+
+
+
+inline void serialize_vector_matrix_d(std::string filename, std::vector<Matrix2x3r> M) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (long unsigned int i = 0; i < M.size(); ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        const Matrix2x3r& temp = M.at(i);
+        for (Eigen::Index j = 0; j < M.at(i).rows(); ++j) {
+            // we print first element since we dont want comma before it (i.e. to the left)
+            output_file << std::setprecision(prec) << temp(j, 0);
+
+            for (Eigen::Index k = 1; k < M.at(i).cols(); ++k) {
+              output_file << std::setprecision(prec) << "," << temp(j, k);
+            }
+
+            output_file << std::endl;
+        }
+        output_file << std::endl; // double newline between matrices
+    }
+
+    output_file.close();
+}
+
+
+inline void serialize_vector_matrix_d(std::string filename, std::vector<Eigen::MatrixXd> M) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (long unsigned int i = 0; i < M.size(); ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        Eigen::MatrixXd& temp = M.at(i);
+        for (Eigen::Index j = 0; j < M.at(i).rows(); ++j) {
+            // we print first element since we dont want comma before it (i.e. to the left)
+            output_file << std::setprecision(prec) << temp(j, 0);
+
+            for (Eigen::Index k = 1; k < M.at(i).cols(); ++k) {
+              output_file << std::setprecision(prec) << "," << temp(j, k);
+            }
+
+            output_file << std::endl;
+        }
+        output_file << std::endl; // double newline between matrices
+    }
+
+    output_file.close();
+}
+
+template<typename T>
+inline void serialize_vector_int(std::string filename, std::vector<T> vec) {
+    spdlog::info("Writing vector data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    // Make sure not trying to access an empty vector
+    if (vec.size() > 0) { 
+      output_file << std::setprecision(prec) << vec.at(0);
+
+    }
+    for (long unsigned int i = 1; i < vec.size(); ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        output_file << std::setprecision(prec) << "," << vec.at(i);
+    }
+    output_file << std::endl;
+    output_file.close();
+}
+
+
+
+inline void serialize_vector_pair_planarpoint(
+  std::string filename, 
+  std::vector<std::pair<PlanarPoint, PlanarPoint>> vec_pair) 
+{
+    spdlog::info("Writing vector data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (long unsigned int i = 0; i < vec_pair.size(); ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        output_file << std::setprecision(prec) << vec_pair.at(i).first[0] << "," << vec_pair.at(i).first[1] << std::endl;
+        output_file << std::setprecision(prec) << vec_pair.at(i).second[0] << "," << vec_pair.at(i).second[1] << std::endl;
+        output_file << std::endl;
+    }
+
+    output_file.close();
+}
+
+// TODO: change to be universal with any type...
+template<typename T>
+inline void serialize_vector_pair_index(std::string filename, std::vector<std::pair<T, T>> vec_pair) {
+    spdlog::info("Writing vector data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (long unsigned int i = 0; i < vec_pair.size(); ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        output_file << std::setprecision(prec) << vec_pair.at(i).first << "," << vec_pair.at(i).second;
+        output_file << std::endl;
+    }
+
+    output_file.close();
+}
+
+// This could be any matrix of any size. Scalable.
+inline void serialize_eigen_matrix_d(std::string filename, Eigen::MatrixXd M) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (Eigen::Index i = 0; i < M.rows(); ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        output_file << std::setprecision(prec) << M(i, 0);
+
+        for (Eigen::Index j = 1; j < M.cols(); ++j) {
+            output_file << std::setprecision(prec) << "," << M(i, j);
+        }
+        output_file << std::endl;
+    }
+
+    output_file.close();
+}
+
+
+// This could be any matrix of any size. Scalable.
+inline std::string serialize_eigen_matrix_d_to_json_str(Eigen::MatrixXd M) {
+    // std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+    std::stringstream output_stream;
+
+    int prec = 17;
+    output_stream << "[";
+    for (Eigen::Index i = 0; i < M.rows(); ++i) {
+
+      output_stream << "[";
+      for (Eigen::Index j = 0; j < M.cols(); ++j) {
+          output_stream << std::setprecision(prec) << M(i, j);
+      
+          // Ensuring not putting a comma on the last element in the row as to avoid trailing commas
+          if (j < M.cols() - 1) {
+            output_stream << ",";
+          }
+        }
+      output_stream << "]";
+
+      if (i < (M.rows() - 1)) {
+        output_stream << ",";
+      }
+    }
+    output_stream << "]";
+
+    return output_stream.str();
+  }
+
+
+// This could be any matrix of any size. Scalable.
+inline std::string serialize_eigen_vector_d_to_json_str(VectorXr M) {
+    // std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+    std::stringstream output_stream;
+
+    int prec = 17;
+    output_stream << "[";
+
+    // Print out by row order
+    for (Eigen::Index i = 0; i < M.size(); ++i) {
+      output_stream << std::setprecision(prec) << M(i);
+  
+      // Ensuring not putting a comma on the last element in the row as to avoid trailing commas
+      if (i < M.size() - 1) {
+        output_stream << ",";
+      }
+    }
+    output_stream << "]";
+
+    return output_stream.str();
+}  
+
+
+
+
+inline void serialize_eigen_matrix_i(std::string filename, Eigen::MatrixXi M) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    for (Eigen::Index i = 0; i < M.rows(); ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        output_file << std::setprecision(prec) << M(i, 0);
+
+        for (Eigen::Index j = 1; j < M.cols(); ++j) {
+            output_file << std::setprecision(prec) << "," << M(i, j);
+        }
+        output_file << std::endl;
+    }
+
+    output_file.close();
+}
+
+inline void serialize_eigen_vector_d(std::string filename, VectorXr M) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+
+    // Print out by row order
+    output_file << std::setprecision(prec) << M(0, 0);
+
+    for (Eigen::Index i = 1; i < M.rows(); ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        output_file << std::setprecision(prec) << "," << M(i, 0);
+    }
+    output_file << std::endl;
+    output_file.close();
+}
+
+
+
+inline void serialize_vector_eigen_vector(std::string filename, std::vector<PlanarPoint> M) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+    // Print out by row order
+    for (long unsigned int i = 0; i < M.size(); ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        PlanarPoint& temp = M.at(i);
+        output_file << std::setprecision(prec) << temp[0] << "," << temp[1] << "," << temp[2] << std::endl;
+    }
+
+    output_file.close();
+}
+
+
+
+inline void serialize_vector_eigen_vector(std::string filename, std::vector<SpatialVector> M) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+    // Print out by row order
+    for (long unsigned int i = 0; i < M.size(); ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        SpatialVector& temp = M.at(i);
+        output_file << std::setprecision(prec) << temp[0] << "," << temp[1] << "," << temp[2] << std::endl;
+    }
+
+    output_file.close();
+}
+
+
+// Overwrittewn method for Eigen:Vector3d types
+inline void serialize_vector_eigen_vector(std::string filename, std::vector<Eigen::Vector3d> M) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+    int prec = 17;
+    // Print out by row order
+    for (long unsigned int i = 0; i < M.size(); ++i) {
+        // Printing out the first element of the row separately since we do not want the comma at the start
+        Eigen::Vector3d& temp = M.at(i);
+        output_file << std::setprecision(prec) << temp[0] << "," << temp[1] << "," << temp[2] << std::endl;
+    }
+
+    output_file.close();
+}
+
+inline std::string serialize_vector_hashtable_json_str(const std::vector<int> hash_table[70][70]) {
+    // TODO: rename variable
+    std::stringstream output_file;
+
+
+    // We might want to serialize this into a JSON file since that would make the most sense.
+    // How would one serialize it into a CSV file? Would such a data structure be represetnative of the hash table?
+    // Hence, JSON file...
+    // But that would mean...
+    // Having the keys be integers... well, integers represented as strings.
+    int prec = 17;
+    // Print out by row order... 
+    // List of list of list is basically what this amounts to.
+    output_file << "[\n";
+
+    // Go through rows
+    for (size_t i = 0; i < 70; ++i) {
+      output_file << "  [\n";
+
+      // Going through columns
+      for (size_t j = 0; j < 70; ++j) {
+        output_file << "    [";
+        for (size_t k = 0; k < hash_table[i][j].size(); ++k) {
+          output_file << std::setprecision(prec) << hash_table[i][j][k];
+          // Avoiding trailing comma
+          if ( k < (hash_table[i][j].size() - 1)) {
+            output_file << ", ";
+          }
+        }
+        output_file << "]" << ((j < 70 - 1) ? ",\n" : "\n");
+      }
+
+      // Formatting the comma placement
+      output_file << "  ]" << ((i < 70 - 1) ? ",\n" : "\n");
+    }
+    output_file << "]";
+
+    return output_file.str();
+}
+
+
+
+inline void serialize_vector_hashtable(std::string filename, const std::vector<int> hash_table[70][70]) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+
+    // We might want to serialize this into a JSON file since that would make the most sense.
+    // How would one serialize it into a CSV file? Would such a data structure be represetnative of the hash table?
+    // Hence, JSON file...
+    // But that would mean...
+    // Having the keys be integers... well, integers represented as strings.
+    int prec = 17;
+    // Print out by row order... 
+    // List of list of list is basically what this amounts to.
+    output_file << "[\n";
+
+    // Go through rows
+    for (size_t i = 0; i < 70; ++i) {
+      output_file << "  [\n";
+
+      // Going through columns
+      for (size_t j = 0; j < 70; ++j) {
+        output_file << "    [";
+        for (size_t k = 0; k < hash_table[i][j].size(); ++k) {
+          output_file << std::setprecision(prec) << hash_table[i][j][k];
+          // Avoiding trailing comma
+          if ( k < (hash_table[i][j].size() - 1)) {
+            output_file << ", ";
+          }
+        }
+        output_file << "]" << ((j < 70 - 1) ? ",\n" : "\n");
+      }
+
+      // Formatting the comma placement
+      output_file << "  ]" << ((i < 70 - 1) ? ",\n" : "\n");
+    }
+    output_file << "]\n";
+    output_file.close();
+}
+
+inline void serialize_vector_hashtable(std::string filename, std::vector<int> hash_table[50][50]) {
+    spdlog::info("Writing matrix data to {}", filename);
+    std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+
+    // We might want to serialize this into a JSON file since that would make the most sense.
+    // How would one serialize it into a CSV file? Would such a data structure be represetnative of the hash table?
+    // Hence, JSON file...
+    // But that would mean...
+    // Having the keys be integers... well, integers represented as strings.
+    int prec = 17;
+    // Print out by row order... 
+    // List of list of list is basically what this amounts to.
+    output_file << "[\n";
+
+    // Go through rows
+    for (size_t i = 0; i < 50; ++i) {
+      output_file << "  [\n";
+
+      // Going through columns
+      for (size_t j = 0; j < 50; ++j) {
+        output_file << "    [";
+        for (size_t k = 0; k < hash_table[i][j].size(); ++k) {
+          output_file << std::setprecision(prec) << hash_table[i][j][k];
+          // Avoiding trailing comma
+          if ( k < (hash_table[i][j].size() - 1)) {
+            output_file << ", ";
+          }
+        }
+        output_file << "]" << ((j < 50 - 1) ? ",\n" : "\n");
+      }
+
+      // Formatting the comma placement
+      output_file << "  ]" << ((i < 50 - 1) ? ",\n" : "\n");
+    }
+    output_file << "]\n";
+    output_file.close();
+}
+
 
 // ***********************
 // Floating point equality
@@ -1090,6 +2125,9 @@ compute_point_cloud_bounding_box(const Matrix& points,
                                  Vector& min_point,
                                  Vector& max_point)
 {
+
+
+
   Eigen::Index num_points = points.rows();
   Eigen::Index dimension = points.cols();
   if (num_points == 0)
@@ -1106,6 +2144,13 @@ compute_point_cloud_bounding_box(const Matrix& points,
       max_point[j] = std::max<double>(max_point[j], points(pi, j));
     }
   }
+
+
+  // // TESTING
+  // std::cout << min_point[0] << " " << min_point[1] << " " << min_point[2] << std::endl;
+  // std::cout << max_point[0] << " " << max_point[1] << " " << max_point[2] << std::endl;
+
+
 }
 
 template<typename Index>

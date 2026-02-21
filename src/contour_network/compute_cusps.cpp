@@ -335,8 +335,14 @@ compute_cusp_by_one_patch(
   // normalized solution
   int num_solutions;
   std::array<PlanarPoint, 4> solutions;
+
   solve_quadratic_quadratic_equation_pencil_method(
     tx, ty, num_solutions, solutions);
+  
+
+  
+
+
 
   std::vector<PlanarPoint> solutions_in_domain;
   // check whether the solution is inside the domain
@@ -589,17 +595,28 @@ compute_spline_surface_cusps(
   std::vector<bool>& has_cusp_at_base,
   std::vector<bool>& has_cusp_at_tip)
 {
-
   interior_cusps.resize(contour_segments.size());
   boundary_cusps.resize(contour_segments.size());
 
+  //
+  // TESTING: serializing parameters so we can test this function individually without relying on other methods
+  //
+  // Use spline_surface from the Python code that initializes the spot mesh and transforms it according to the frame.
+  std::cout << "We are in compute spline surface cusps" << std::endl;
+  std::string filepath_1 = "spot_control/contour_network/compute_cusps/compute_spline_surface_cusps/";
+  serialize_vector_conic(filepath_1+"contour_domain_curve_segments.json", contour_domain_curve_segments);
+  serialize_vector_rational_function<4, 3>(filepath_1+"contour_segments.json", contour_segments);
+  serialize_vector_int(filepath_1+"patch_indices.csv", patch_indices);
+  serialize_vector_vector(filepath_1+"closed_contours.csv", closed_contours);
+
   // interior conics
   for (size_t i = 0; i < contour_domain_curve_segments.size(); i++) {
-
     compute_cusp_by_one_patch(spline_surface.get_patch(patch_indices[i]),
                               contour_domain_curve_segments[i],
                               interior_cusps[i]);
   }
+  // TESTING NOTE: interior cusps has empty vector elements... 
+  serialize_vector_vector(filepath_1+"interior_cusps.csv", interior_cusps);
 
   // compute cusp funtion endpoints
   std::vector<double> function_start_points;
@@ -614,6 +631,14 @@ compute_spline_surface_cusps(
                                 function_start_points_param,
                                 function_end_points_param);
 
+  // TESTING
+  std::string filepath_2 = "spot_control/contour_network/compute_cusps/compute_cusp_start_end_points/";
+  serialize_vector_int(filepath_2+"function_start_points.csv", function_start_points);
+  serialize_vector_int(filepath_2+"function_end_points.csv", function_end_points);
+  serialize_vector_int(filepath_2+"function_start_points_param.csv", function_start_points_param);
+  serialize_vector_int(filepath_2+"function_end_points_param.csv", function_end_points_param);
+
+
   // compute boundary cusps
   compute_boundary_cusps(function_start_points,
                          function_end_points,
@@ -623,4 +648,10 @@ compute_spline_surface_cusps(
                          boundary_cusps,
                          has_cusp_at_base,
                          has_cusp_at_tip);
+
+  // TESTING
+  std::string filepath_3 = "spot_control/contour_network/compute_cusps/compute_boundary_cusps/";
+  serialize_vector_vector(filepath_3+"boundary_cusps.csv", boundary_cusps);
+  serialize_vector_int(filepath_3+"has_cusp_at_base.csv", has_cusp_at_base);
+  serialize_vector_int(filepath_3+"has_cusp_at_tip.csv", has_cusp_at_tip);
 }

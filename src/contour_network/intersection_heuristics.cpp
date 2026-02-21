@@ -439,6 +439,18 @@ compute_bounding_box_hash_table(
   std::vector<int> hash_table[50][50],
   std::vector<std::vector<int>>& reverse_hash_table)
 {
+  // 
+  // TESTING
+  //
+  std::string filepath = "spot_control/contour_network/intersection_heuristics/compute_bounding_box_hash_table/";
+  serialize_vector_pair_planarpoint(filepath+"bounding_boxes.csv", bounding_boxes);
+  serialize_vector_hashtable(filepath+"hash_table_in.json", hash_table);
+  // 
+  // END OF TESTING
+  // 
+
+
+
   reverse_hash_table.clear();
   int num_interval = 50;
   int num_segments = bounding_boxes.size();
@@ -495,6 +507,16 @@ compute_bounding_box_hash_table(
       }
     }
   }
+
+  // 
+  // TESTING
+  // 
+  serialize_vector_hashtable(filepath+"hash_table_out.json", hash_table);
+  serialize_vector_vector(filepath+"reverse_hash_table.csv", reverse_hash_table);
+  // 
+  // END OF TESTING
+  // 
+
 }
 
 // helper for linear intersections

@@ -5,6 +5,8 @@
 
 #include <Eigen/Core>
 #include <iostream>
+#include <string>
+#include <sstream>
 
 #include "bivariate_quadratic_function.h"
 #include "common.h"
@@ -144,3 +146,19 @@ private:
 
 std::ostream&
 operator<<(std::ostream& out, const Conic& F);
+
+
+
+
+
+// 
+// MY HELPERS
+// 
+std::string conictype_to_str(ConicType conic_type); 
+
+// Turns a conic into JSON file.
+std::string serialize_conic(const Conic& conic);
+
+void serialize_vector_conic(    
+    std::string filename,
+    const std::vector<Conic>& conics);

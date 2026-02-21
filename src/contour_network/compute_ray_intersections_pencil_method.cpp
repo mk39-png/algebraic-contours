@@ -18,6 +18,12 @@ solve_lin_quadr(double a_in[6],
 int
 solve_quadr(double q[3], double thres, double solution[2])
 {
+  // TESTING
+  std::string filepath = "spot_control/contour_network/compute_ray_intersections_pencil_method/solve_lin_quadr/";
+  static size_t counter = 0;
+  serialize_array_3(filepath+"q/"+std::to_string(counter)+".csv", q);
+  serialize_vector_int(filepath+"thres.csv", std::vector{thres});
+
   double discr;
   int num_sol;
   if (thres <= fabs(q[0])) {
@@ -41,6 +47,11 @@ solve_quadr(double q[3], double thres, double solution[2])
     num_sol = 1;
   } else
     num_sol = 0;
+
+  // TESTING
+  serialize_array_2(filepath+"solution/"+std::to_string(counter)+".csv", solution);
+  serialize_vector_int(filepath+"num_sol/"+std::to_string(counter)+".csv", std::vector{num_sol});
+  counter++;
   return (num_sol);
 }
 
@@ -51,6 +62,14 @@ solve_lin_quadr(double a_in[6],
                 double thres,
                 double solution[2][2])
 {
+
+  // TESTING
+  std::string filepath = "spot_control/contour_network/compute_ray_intersections_pencil_method/solve_lin_quadr/";
+  static size_t counter = 0;
+  serialize_array(filepath+"a_in/"+std::to_string(counter)+".csv", a_in);
+  serialize_array(filepath+"b_in/"+std::to_string(counter)+".csv", b_in);
+  serialize_vector_int(filepath+"thres.csv", std::vector{thres});
+
   double quadr_coeff[3];
   double v_sol[2];
   double u_sol[2];
@@ -116,6 +135,11 @@ solve_lin_quadr(double a_in[6],
     }
   } else
     num_sol = 0;
+
+  // TESTING
+  serialize_array_2x2(filepath+"solution/"+std::to_string(counter)+".csv", solution);
+  serialize_vector_int(filepath+"num_sol/"+std::to_string(counter)+".csv", std::vector{num_sol});
+  counter++;
   return (num_sol);
 }
 
@@ -487,9 +511,12 @@ solve_quadratic_quadratic_equation_pencil_method(
   int& num_intersections,
   std::array<PlanarPoint, MAX_PATCH_RAY_INTERSECTIONS>& intersection_points)
 {
+  // 
+  // TESTING STUFF AND WHATNOT
+  // 
+  static size_t counter = 0;
 
   // divide by max coeff to get better precision
-
   double max = abs(a[0]);
   for (int i = 0; i < 6; i++) {
     if (max < abs(a[i]))
@@ -498,11 +525,35 @@ solve_quadratic_quadratic_equation_pencil_method(
       max = abs(b[i]);
   }
 
+
   double F[6] = { a[4] / max, a[5] / max, a[0] / max,
                   a[3] / max, a[1] / max, a[2] / max };
   double G[6] = { b[4] / max, b[5] / max, b[0] / max,
                   b[3] / max, b[1] / max, b[2] / max };
+
+  // 
+  // TESTING
+  // 
+  std::string filepath_0 = "spot_control/contour_network/compute_ray_intersections_pencil_method/pencil_first_part/";
+  serialize_array(filepath_0+"coeff_F/"+std::to_string(counter)+".csv", F);
+  serialize_array(filepath_0+"coeff_G/"+std::to_string(counter)+".csv", G);
+  
   pencil_first_part(F, G, num_intersections, intersection_points);
+
+  // TESTING SERIALIZING RESULT of pencil_first_part
+  serialize_array_eigen_vector_d(filepath_0+"intersection_points/"+std::to_string(counter)+".csv", intersection_points);
+  std::vector<int> placeholder = {num_intersections};
+  serialize_vector_int(filepath_0+"num_intersections/"+std::to_string(counter)+".csv", placeholder);
+
+  // Serializing result of solve_quadratic_quadratic_equation_pencil_method
+  std::string filepath = "spot_control/contour_network/compute_ray_intersections_pencil_method/solve_quadratic_equation_pencil_method/";
+  serialize_array(filepath+"a/"+std::to_string(counter)+".csv", a);
+  serialize_array(filepath+"b/"+std::to_string(counter)+".csv", b);
+  serialize_array_eigen_vector_d(filepath+"intersection_points/"+std::to_string(counter)+".csv", intersection_points);
+  serialize_vector_int(filepath+"num_intersections/"+std::to_string(counter)+".csv", placeholder);
+
+  counter++;
+
 }
 
 void
@@ -515,6 +566,18 @@ compute_spline_surface_patch_ray_intersections_pencil_method(
   long long& ray_intersections_call,
   long long& ray_bounding_box_call)
 {
+  // 
+  // TODO: testing
+  // 
+  static size_t counter = 0;
+  std::string filepath = "spot_control/contour_network/compute_ray_intersections_pencil_method/compute_spline_surface_patch_ray_intersections_pencil_method/";
+  spline_surface_patch.serialize_to_json_file(filepath+"spline_surface_patch/"+std::to_string(counter)+".json");
+  serialize_eigen_matrix_d(filepath+"ray_mapping_coeffs/"+std::to_string(counter)+".csv", ray_mapping_coeffs);
+  serialize_vector_int(filepath+"ray_intersections_call_in/"+std::to_string(counter)+".csv", std::vector{ray_intersections_call});
+  serialize_vector_int(filepath+"ray_bounding_box_call_in/"+std::to_string(counter)+".csv", std::vector{ray_bounding_box_call});
+
+
+
   num_intersections = 0;
   const ConvexPolygon& domain = spline_surface_patch.get_domain();
   spdlog::trace("Domain: {}", domain.get_vertices());
@@ -600,10 +663,27 @@ compute_spline_surface_patch_ray_intersections_pencil_method(
   std::array<PlanarPoint, MAX_PATCH_RAY_INTERSECTIONS>
     normalized_surface_intersections;
   std::array<double, MAX_PATCH_RAY_INTERSECTIONS> normalized_ray_intersections;
+
+  // DEBUGGING - SERIALIZING
+  // static size_t counter = 0;
+  // std::string filepath_0 = "/contour_network/compute_ray_intersections_pencil_method/pencil_first_part_qi_testing/";
+  // serialize_array(filepath_0+"coeff_F/"+std::to_string(counter)+".csv", coeff_F);
+  // serialize_array(filepath_0+"coeff_G/"+std::to_string(counter)+".csv", coeff_G);
+
   pencil_first_part(coeff_F,
                     coeff_G,
                     num_intersections_all,
                     normalized_surface_intersections_all);
+
+  // TESTING SERIALIZING RESULT of pencil_first_part
+  // serialize_array_eigen_vector_d(filepath_0+"intersection_points/"+std::to_string(counter)+".csv", normalized_surface_intersections_all);
+  // serialize_vector_int(filepath_0+"num_intersections/"+std::to_string(counter)+".csv", std::vector{num_intersections_all});
+
+
+
+
+
+
   if (num_intersections_all > MAX_PATCH_RAY_INTERSECTIONS) {
     spdlog::error(
       "More than the maximum possible number of patch ray intersections found");
@@ -662,4 +742,31 @@ compute_spline_surface_patch_ray_intersections_pencil_method(
       "Coefficients for the surface mapping with normalized domain: {}",
       formatted_bivariate_quadratic_mapping(normalized_surface_mapping_coeffs));
   }
+
+
+
+  // 
+  // TESTING
+  // 
+  // serialize_array_eigen_vector_d(filepath+"surface_intersections/"+std::to_string(counter)+".csv", surface_intersections);
+  // serialize_array_4(filepath+"ray_intersections/"+std::to_string(counter)+".csv", ray_intersections);
+  // serialize_vector_int(filepath+"ray_intersections_call_out/"+std::to_string(counter)+".csv", std::vector{ray_intersections_call});
+  // serialize_vector_int(filepath+"ray_bounding_box_call_out/"+std::to_string(counter)+".csv", std::vector{ray_bounding_box_call});
+  // serialize_vector_int(filepath+"num_intersections/"+std::to_string(counter)+".csv", std::vector{num_intersections});
+
+  counter++;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }

@@ -39,6 +39,11 @@ public:
   QuadraticSplineSurfacePatch(const Matrix6x3r& surface_mapping_coeffs,
                               const ConvexPolygon& domain);
 
+
+  std::string serialize_to_json_string() const;
+  void serialize_to_json_file(std::string filename) const;
+
+
   /// Get the dimension of the surface patch ambient space
   ///
   /// @return dimension of the ambient space

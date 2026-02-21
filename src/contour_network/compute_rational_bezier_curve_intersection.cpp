@@ -286,6 +286,18 @@ clipfatline(double P[5][3],
             double clip_range[2],
             double precision = 1e-8)
 {
+
+  // 
+  // TESTING
+  // 
+  static size_t counter = 0;
+  std::string filepath = "spot_control/contour_network/compute_rational_bezier_curve_intersection/clipfatline/";
+  serialize_array_5x3(filepath+"Q/"+std::to_string(counter)+".csv", Q);
+  serialize_array_5x3(filepath+"P/"+std::to_string(counter)+".csv", P);
+  std::vector<double> placeholder = {precision};
+  serialize_vector_int(filepath+"precision.csv", placeholder);
+
+
   for (int i = 0; i < 5; i++) {
     //        P[i][0]/=P[i][2];
     //        P[i][1]/=P[i][2];
@@ -341,6 +353,13 @@ clipfatline(double P[5][3],
     clip_range[1] = fmin(tmin[1], tmax[1]);
     ;
   }
+
+  // 
+  // TESTING
+  // 
+
+  serialize_array_2(filepath+"clip_range/"+std::to_string(counter)+".csv", clip_range);
+  counter++;
 }
 
 // inkscope code
@@ -355,6 +374,17 @@ iterate(std::vector<Interval_ink>& domsA,
 {
   // in order to limit recursion
   static size_t counter = 0;
+
+
+  // 
+  // TODO: serialize the members for every call to iterate
+  // Reason being is uhhh
+  // That helps us keep track of what the function values are at a current state.
+  // 
+
+
+
+
   if (float_equal_ink(domA.extent(), 1.0) &&
       float_equal_ink(domB.extent(), 1.0))
     counter = 0;
@@ -386,6 +416,12 @@ iterate(std::vector<Interval_ink>& domsA,
     return;
   }
 
+
+  // 
+  // TESTING 
+  //
+  static size_t clipfatline_counter = 0;
+
   size_t iter = 0;
   while (++iter < 100 &&
          (dompA.extent() >= precision || dompB.extent() >= precision)) {
@@ -403,6 +439,7 @@ iterate(std::vector<Interval_ink>& domsA,
     }
 
     clipfatline(Q, P, clip_range, precision);
+    clipfatline_counter++;
 
     dom = std::make_shared<OptInterval>(clip_range[0], clip_range[1]);
 
@@ -488,7 +525,24 @@ find_intersections_bezier_clipping(std::vector<std::pair<double, double>>& xs,
                                    std::vector<Point> const& B,
                                    double precision)
 {
+
+  // 
+  // TESTING  
+  // 
+  static size_t counter = 0;
+  std::string filepath = "spot_control/contour_network/compute_rational_bezier_curve_intersection/find_intersections_bezier_clipping/";
+  serialize_vector_eigen_vector(filepath+"A/"+std::to_string(counter)+".csv", A);
+  serialize_vector_eigen_vector(filepath+"B/"+std::to_string(counter)+".csv", B);
+  std::vector<double> placeholder = {precision};
+  serialize_vector_int(filepath+"precision.csv", placeholder);
+
   get_solutions(xs, A, B, precision);
+
+  // 
+  // TESTING
+  // 
+  serialize_vector_pair_index(filepath+"xs/"+std::to_string(counter)+".csv", xs);
+  counter++;
 }
 
 // split rational curve

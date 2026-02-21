@@ -38,13 +38,18 @@ int main(int argc, char *argv[])
     {"chains",     SVGOutputMode::random_chains},
   };
 
+  // To avoid error
+  int placeholder = sizeof(*argv) + argc;
+  std::cout << placeholder << std::endl;
+
   // Get command line arguments
   CLI::App app{"Generate smooth occluding contours for a mesh."};
-  std::string input_filename = "";
+  // std::string input_filename = "";
+  std::string input_filename = "spot_control_mesh-cleaned_conf_simplified_with_uv.obj";
   std::string output_dir = "./";
   std::string camera_filename = "";
   spdlog::level::level_enum log_level = spdlog::level::off;
-  SVGOutputMode svg_output_mode = SVGOutputMode::uniform_visible_curves;
+  SVGOutputMode svg_output_mode = SVGOutputMode::random_chains;
   OptimizationParameters optimization_params;
   IntersectionParameters intersect_params;
   InvisibilityParameters invisibility_params;
@@ -52,7 +57,7 @@ int main(int argc, char *argv[])
   double trim = intersect_params.trim_amount;
   double pad = invisibility_params.pad_amount;
   InvisibilityMethod invisibility_method = invisibility_params.invisibility_method;
-  bool show_nodes = false;
+  bool show_nodes = false; // TODO: test with = true
   app.add_option("-i,--input", input_filename, "Mesh filepath")
     ->check(CLI::ExistingFile)
     ->required();
@@ -74,6 +79,11 @@ int main(int argc, char *argv[])
     ->check(CLI::NonNegativeNumber);
   app.add_flag("--show_nodes", show_nodes, "Show important nodes in the contours");
   CLI11_PARSE(app, argc, argv);
+
+  // Set folder path for parsing inputs and outputs
+  std::string mesh_name = std::filesystem::path(input_filename).stem().string();
+  std::string camera_name = std::filesystem::path(camera_filename).stem().string();
+  Paths::initialize(mesh_name, camera_name);
 
   // Set logger level
   spdlog::set_level(log_level);
@@ -104,6 +114,10 @@ int main(int argc, char *argv[])
     spdlog::info("Projecting onto frame:\n{}", frame);
     MatrixXr V_copy = V;
     apply_camera_frame_transformation_to_vertices(V_copy, frame, V);
+
+    // Save the transformed vertices to file to compare.
+    std::string filepath = "spot_control/core/apply_transformations/apply_camera_frame_transformation_to_vertices/";
+    serialize_eigen_matrix_d(filepath+"V_transformed.csv", V);
   } else
   {
     Eigen::Matrix<double, 4, 4> camera_matrix, projection_matrix;
@@ -125,6 +139,8 @@ int main(int argc, char *argv[])
   Eigen::CholmodSupernodalLLT<Eigen::SparseMatrix<double>>
       energy_hessian_inverse;
   AffineManifold affine_manifold(F, uv, FT);
+
+
   TwelveSplitSplineSurface spline_surface(
       V, affine_manifold,
       optimization_params, face_to_patch_indices, patch_to_face_indices,
@@ -133,6 +149,10 @@ int main(int argc, char *argv[])
   // Get the boundary edges
 	std::vector<std::pair<int, int>> patch_boundary_edges(0);
   compute_twelve_split_spline_patch_boundary_edges(F, face_to_patch_indices, patch_boundary_edges);
+  
+  // TESTING
+  std::string filepath = "spot_control/12_split_spline/compute_twelve_split_spline_patch_boundary_edges/";
+  serialize_vector_pair_index(filepath+"patch_boundary_edges.csv", patch_boundary_edges);
 
   // Build the contours
   spdlog::info("Computing contours");
@@ -148,4 +168,5 @@ int main(int argc, char *argv[])
   std::string contour_network_file ("contours.svg");
   std::string contour_network_path = join_path(output_dir, contour_network_file);
   contour_network.write(contour_network_path, svg_output_mode, show_nodes);
+  contour_network.view_contours();
 }

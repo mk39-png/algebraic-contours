@@ -87,6 +87,24 @@ ConvexPolygon::ConvexPolygon(
   m_vertices.row(2) = v2;
 }
 
+
+
+
+// 
+// TESTING
+// 
+std::string ConvexPolygon::serialize_to_json_string() const {
+  std::stringstream output_stream;
+
+  output_stream << "{\n";
+  output_stream << "\"boundary_segment_coeffs\": " << serialize_array_matrix_d_to_json_str(m_boundary_segments_coeffs) << "," << std::endl;
+  output_stream << "\"vertices\": " << serialize_eigen_matrix_d_to_json_str(m_vertices) << std::endl;
+  output_stream << "}";
+
+  return output_stream.str();
+}
+
+
 ConvexPolygon::ConvexPolygon(const Eigen::Matrix<double, 3, 2>& vertices)
   : m_vertices(vertices)
 {

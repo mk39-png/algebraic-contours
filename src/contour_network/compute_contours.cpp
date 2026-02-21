@@ -3,6 +3,7 @@
 
 #include "compute_contours.h"
 
+#include <string>
 #include "compute_boundaries.h"
 #include "intersect_conic.h"
 #include "parametrize_conic.h"
@@ -320,6 +321,27 @@ compute_spline_surface_contours(
     assert(contour_patch_indices.size() == contour_segments.size());
   }
 
+  // TESTING
+  std::string filepath = "spot_control/contour_network/compute_contours/compute_spline_surface_contours/";
+  
+  std::ofstream output_file(filepath+"contour_domain_curve_segments.txt", std::ios::out | std::ios::trunc);
+  for (size_t i = 0; i < contour_domain_curve_segments.size(); ++i) {
+    output_file << contour_domain_curve_segments.at(i) << std::endl;
+  }
+  output_file.close();
+  serialize_vector_conic(filepath+"contour_domain_curve_segments.json", contour_domain_curve_segments);
+
+  std::ofstream output_file2(filepath+"contour_segments.txt", std::ios::out | std::ios::trunc);
+  for (size_t i = 0; i < contour_segments.size(); ++i) {
+    output_file2 << contour_segments.at(i) << std::endl;
+  }
+  output_file2.close();
+  serialize_vector_rational_function<4, 3>(filepath+"contour_segments.json", contour_segments);
+
+
+  serialize_vector_int(filepath+"contour_patch_indices.csv", contour_patch_indices);
+  serialize_vector_pair_index(filepath+"line_intersection_indices.csv", line_intersection_indices);
+
   spdlog::info("Found {} contour segments", contour_segments.size());
 }
 
@@ -359,6 +381,15 @@ compute_spline_surface_boundaries(
     // Record patch index
     boundary_patch_indices.push_back(patch_index);
   }
+
+  // 
+  // TESTING
+  // 
+  std::string filepath = "spot_control/contour_network/compute_contours/compute_spline_surface_boundaries/";
+  serialize_vector_pair_index(filepath+"patch_boundary_edges.csv", patch_boundary_edges);
+  serialize_vector_conic(filepath+"boundary_domain_curve_segments.json", boundary_domain_curve_segments);
+  serialize_vector_rational_function<4, 3>(filepath+"boundary_segments.json", boundary_segments);
+  serialize_vector_int(filepath+"boundary_patch_indices.csv", boundary_patch_indices);
 }
 
 double
@@ -386,6 +417,21 @@ compute_spline_surface_boundary_intersections(
 {
   size_t num_patches = spline_surface.num_patches();
   size_t num_interior_contours = contour_domain_curve_segments.size();
+
+
+  // 
+  // TESTING: get parameters
+  // 
+  std::string filepath = "spot_control/contour_network/compute_contours/compute_spline_surface_boundary_intersections/";
+  serialize_vector_conic(filepath+"contour_domain_curve_segments.json", contour_domain_curve_segments);
+  serialize_vector_int(filepath+"contour_patch_indices.csv", contour_patch_indices);
+  serialize_vector_pair_index(filepath+"line_intersection_indices.csv", line_intersection_indices);
+  serialize_vector_pair_index(filepath+"patch_boundary_edges.csv", patch_boundary_edges);
+  serialize_vector_conic(filepath+"boundary_domain_curve_segments.json", boundary_domain_curve_segments);
+  std::ofstream output_file(filepath+"num_intersections_in.txt", std::ios::out | std::ios::trunc);
+  output_file << std::to_string(num_intersections) << std::endl;
+  output_file.close();
+
 
   // Build map from spine surface edges to boundary edge indices (or -1)
   std::vector<std::array<int, 3>> patch_boundary_contour_map(num_patches,
@@ -527,6 +573,12 @@ compute_spline_surface_boundary_intersections(
   }
   spdlog::info("{} interior and boundary intersections found",
                num_intersections);
+
+  serialize_intersection_data(filepath+"contour_intersections.json", contour_intersections);
+  std::ofstream output_file_2(filepath+"num_intersections_out.txt", std::ios::out | std::ios::trunc);
+  output_file_2 << std::to_string(num_intersections) << std::endl;
+  output_file_2.close();
+
 }
 
 void
@@ -551,7 +603,10 @@ compute_spline_surface_contours_and_boundaries(
                                   contour_segments,
                                   contour_patch_indices,
                                   line_intersection_indices);
+
+
   contour_is_boundary = std::vector<bool>(contour_segments.size(), false);
+
 
   // Compute boundaries
   std::vector<Conic> boundary_domain_curve_segments;
@@ -583,6 +638,36 @@ compute_spline_surface_contours_and_boundaries(
   append(contour_segments, boundary_segments);
   append(contour_patch_indices, boundary_patch_indices);
   append(contour_is_boundary, boundary_is_boundary);
+  
+  // -----------------
+  // TESTING
+  // -----------------
+  std::string filepath = "spot_control/contour_network/compute_contours/compute_spline_surface_contours_and_boundaries/";
+  // serialize_vector_conic(filepath+"contour_domain_curve_segments.json", contour_domain_curve_segments);
+  // std::ofstream output_file(filepath+"contour_domain_curve_segments.txt", std::ios::out | std::ios::trunc);
+  // for (size_t i = 0; i < contour_domain_curve_segments.size(); ++i) {
+    // output_file << contour_domain_curve_segments.at(i) << std::endl;
+  // }
+  // output_file.close();
+  // serialize_vector_rational_function<4, 3>(filepath+"contour_segments.json", contour_segments);
+
+  // std::ofstream output_file_2(filepath+"contour_segments.txt", std::ios::out | std::ios::trunc);
+  // for (size_t i = 0; i < contour_segments.size(); ++i) {
+    // output_file_2 << contour_segments.at(i) << std::endl;
+  // }
+  // output_file_2.close();
+
+  spline_surface.write_spline(filepath+"spline_surface.txt");
+  serialize_eigen_matrix_d(filepath+"frame.csv", frame);
+  serialize_vector_pair_index(filepath+"patch_boundary_edges.csv", patch_boundary_edges);
+  serialize_vector_rational_function<4, 3>(filepath+"contour_segments.json", contour_segments);
+  serialize_vector_conic(filepath+"contour_domain_curve_segments.json", contour_domain_curve_segments);
+  serialize_vector_int(filepath+"contour_patch_indices.csv", contour_patch_indices);
+  serialize_vector_int(filepath+"contour_is_boundary.csv", contour_is_boundary);
+  serialize_intersection_data(filepath+"contour_intersections.json", contour_intersections);
+  std::ofstream output_file_3(filepath+"num_intersections.txt", std::ios::out | std::ios::trunc);
+  output_file_3 << std::to_string(num_intersections) << std::endl;
+  output_file_3.close();
 }
 
 void
@@ -594,6 +679,12 @@ pad_contours(std::vector<Conic>& contour_domain_curve_segments,
   if (pad_amount <= 0.0)
     return;
 
+  // TESTING - SERIALIZING BEFORE PADDING
+  std::string filepath = "spot_control/contour_network/compute_contours/pad_contours/";
+  serialize_vector_conic(filepath+"contour_domain_curve_segments.json", contour_domain_curve_segments);
+  serialize_vector_rational_function<4, 3>(filepath+"contour_segments.json", contour_segments);
+  serialize_vector_rational_function<4, 2>(filepath+"planar_contour_segments.json", planar_contour_segments);
+
   for (size_t i = 0; i < contour_domain_curve_segments.size(); ++i) {
     contour_domain_curve_segments[i].domain().pad_lower_bound(pad_amount);
     contour_domain_curve_segments[i].domain().pad_upper_bound(pad_amount);
@@ -602,4 +693,29 @@ pad_contours(std::vector<Conic>& contour_domain_curve_segments,
     planar_contour_segments[i].domain().pad_lower_bound(pad_amount);
     planar_contour_segments[i].domain().pad_upper_bound(pad_amount);
   }
+
+  //
+  // TESTING - SERIALIZING AFTER PADDING
+  //
+  std::ofstream output_file(filepath+"contour_domain_curve_segments_PADDED.txt", std::ios::out | std::ios::trunc);
+  for (size_t i = 0; i < contour_domain_curve_segments.size(); ++i) {
+    output_file << contour_domain_curve_segments.at(i) << std::endl;
+  }
+  output_file.close();
+  serialize_vector_conic(filepath+"contour_domain_curve_segments_PADDED.json", contour_domain_curve_segments);
+
+  std::ofstream output_file_2(filepath+"contour_segments_PADDED.txt", std::ios::out | std::ios::trunc);
+  for (size_t i = 0; i < contour_segments.size(); ++i) {
+    output_file_2 << contour_segments.at(i) << std::endl;
+  }
+  output_file_2.close();
+  serialize_vector_rational_function<4, 3>(filepath+"contour_segments_PADDED.json", contour_segments);
+
+  std::ofstream output_file_3(filepath+"planar_contour_segments_PADDED.txt", std::ios::out | std::ios::trunc);
+  for (size_t i = 0; i < planar_contour_segments.size(); ++i) {
+    output_file_3 << planar_contour_segments.at(i) << std::endl;
+  }
+  output_file_3.close();
+  serialize_vector_rational_function<4, 2>(filepath+"planar_contour_segments_PADDED.json", planar_contour_segments);
+
 }

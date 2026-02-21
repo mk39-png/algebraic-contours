@@ -22,6 +22,68 @@ QuadraticSplineSurface::QuadraticSplineSurface()
   clear();
 }
 
+
+
+std::string QuadraticSplineSurface::serialize_vector_patch_to_json_str() const {
+  std::stringstream output_string;
+
+  output_string << "[";
+
+  for (size_t i = 0; i < m_patches.size(); ++i) {
+    output_string << m_patches.at(i).serialize_to_json_string();
+    
+    // Comma placement
+    if (i < (m_patches.size() - 1)) {
+      output_string << ",";
+    }
+  }
+
+  output_string << "]";
+
+  return output_string.str();
+}
+
+std::string
+QuadraticSplineSurface::serialize_to_json_str() const {
+  // Serialize EVERYTHING to a uhh file of some sort...
+  // Actually... yeah nvm.
+  std::stringstream output_string;
+
+  output_string << "{\n";
+
+  // std::vector<int> hash_table[HASH_TABLE_SIZE][HASH_TABLE_SIZE];
+  // std::vector<std::vector<std::pair<int, int>>> reverse_hash_table;
+  // double patches_bbox_x_min, patches_bbox_x_max, patches_bbox_y_min, patches_bbox_y_max;
+  // double hash_x_interval;
+  // double hash_y_interval;
+  // std::vector<QuadraticSplineSurfacePatch> m_patches;
+  int prec = 17;
+
+  output_string << "\"hash_table\": " << serialize_vector_hashtable_json_str(hash_table) << ",";
+  output_string << "\"reverse_hash_table\": " << serialize_vector_vector_pair_to_json_str(reverse_hash_table) << ",";
+  output_string << "\"patches_bbox_x_min\": " << std::setprecision(prec) << patches_bbox_x_min << ",";
+  output_string << "\"patches_bbox_x_max\": " << std::setprecision(prec) << patches_bbox_x_max << ",";
+  output_string << "\"patches_bbox_y_min\": " << std::setprecision(prec) << patches_bbox_y_min << ",";
+  output_string << "\"patches_bbox_y_max\": " << std::setprecision(prec) << patches_bbox_y_max << ",";
+  output_string << "\"hash_x_interval\": " << std::setprecision(prec) << hash_x_interval << ",";
+  output_string << "\"hash_y_interval\": " << std::setprecision(prec) << hash_y_interval << ",";
+  output_string << "\"patches\": " << serialize_vector_patch_to_json_str() <<  std::endl;
+  
+  output_string << "}";
+  
+
+  return output_string.str();
+
+}
+
+void 
+QuadraticSplineSurface::serialize_to_json_file(std::string filename) const {
+  std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+  output_file << serialize_to_json_str() << std::endl;
+  output_file.close();
+}
+
+
 QuadraticSplineSurface::QuadraticSplineSurface(
   std::vector<QuadraticSplineSurfacePatch>& patches)
 {
@@ -83,6 +145,12 @@ QuadraticSplineSurface::discretize(
   triangulate_patch(patch_index, num_subdivisions, V, F, N);
   int num_patch_vertices = V.rows();
   int num_patch_faces = F.rows();
+
+  // serialize_eigen_matrix_d("spot_control/quadratic_spline_surface/discretize/V_triangulate_patch_0.csv", V);
+  // serialize_eigen_matrix_i("spot_control/quadratic_spline_surface/discretize/F_triangulate_patch_0.csv", F);
+  // serialize_eigen_matrix_d("spot_control/quadratic_spline_surface/discretize/N_triangulate_patch_0.csv", N);
+
+
   V.conservativeResize(num_patch_vertices * num_patches(), 3);
   F.conservativeResize(num_patch_faces * num_patches(), 3);
   N.conservativeResize(num_patch_vertices * num_patches(), 3);
@@ -182,6 +250,7 @@ QuadraticSplineSurface::add_surface_to_viewer(Eigen::Matrix<double, 3, 1> color,
   surface_disc_params.num_subdivisions = num_subdivisions;
   discretize(surface_disc_params, V, F, N);
 
+  
   // Add surface mesh
   polyscope::init();
   polyscope::registerSurfaceMesh("surface", V, F)
@@ -194,11 +263,21 @@ QuadraticSplineSurface::add_surface_to_viewer(Eigen::Matrix<double, 3, 1> color,
   std::vector<std::vector<int>> boundary_polylines;
   discretize_patch_boundaries(boundary_points, boundary_polylines);
 
+
   // View contour curve network
   MatrixXr boundary_points_mat =
     convert_nested_vector_to_matrix(boundary_points);
   std::vector<std::array<int, 2>> boundary_edges =
     convert_polylines_to_edges(boundary_polylines);
+
+  // serialize_eigen_matrix_d("spot_control/quadratic_spline_surface/add_surface_to_viewer/V_discretized_2_subdiv.csv", V);
+  // serialize_eigen_matrix_i("spot_control/quadratic_spline_surface/add_surface_to_viewer/F_discretized_2_subdiv.csv", F);
+  // serialize_eigen_matrix_d("spot_control/quadratic_spline_surface/add_surface_to_viewer/N_discretized_2_subdiv.csv", N);
+  // serialize_vector_eigen_vector("spot_control/quadratic_spline_surface/add_surface_to_viewer/boundary_points.csv", boundary_points);
+  // serialize_vector_vector("spot_control/quadratic_spline_surface/add_surface_to_viewer/boundary_polylines.csv", boundary_polylines);
+  // serialize_eigen_matrix_d("spot_control/quadratic_spline_surface/add_surface_to_viewer/boundary_points_mat.csv", boundary_points_mat);
+  // serialize_vector_array_int_2("spot_control/quadratic_spline_surface/add_surface_to_viewer/boundary_edges.csv", boundary_edges);
+
   polyscope::registerCurveNetwork(
     "patch_boundaries", boundary_points_mat, boundary_edges);
   polyscope::getCurveNetwork("patch_boundaries")

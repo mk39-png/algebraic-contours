@@ -41,6 +41,9 @@ compute_bezier_points(const Matrix6x3r& normalized_surface_mapping_coeffs,
 // Public Methods
 // **************
 
+
+
+
 QuadraticSplineSurfacePatch::QuadraticSplineSurfacePatch()
 {
   m_surface_mapping_coeffs.setZero();
@@ -69,6 +72,34 @@ QuadraticSplineSurfacePatch::QuadraticSplineSurfacePatch(
   // Do not mark a cone by default
   m_cone_index = -1;
 }
+
+
+
+std::string 
+QuadraticSplineSurfacePatch::serialize_to_json_string() const {
+    std::stringstream output_stream;
+
+    output_stream << "{\n";
+    output_stream << "  \"surface_mapping_coeffs\": " << serialize_eigen_matrix_d_to_json_str(m_surface_mapping_coeffs) << "," << std::endl;
+    output_stream << "  \"domain\": " << m_domain.serialize_to_json_string() << "," << std::endl;
+    output_stream << "  \"normal_mapping_coeffs\": " << serialize_eigen_matrix_d_to_json_str(m_normal_mapping_coeffs) << "," << std::endl;
+    output_stream << "  \"normalized_surface_mapping_coeffs\": " << serialize_eigen_matrix_d_to_json_str(m_normalized_surface_mapping_coeffs) << "," << std::endl;
+    output_stream << "  \"bezier_points\": " << serialize_eigen_matrix_d_to_json_str(m_bezier_points) << "," << std::endl;
+    output_stream << "  \"min_point\": " << serialize_eigen_vector_d_to_json_str(m_min_point) << "," << std::endl;
+    output_stream << "  \"max_point\": " << serialize_eigen_vector_d_to_json_str(m_max_point) << "," << std::endl;
+    output_stream << "  \"cone_index\": " << m_cone_index << std::endl;
+    output_stream << "}";
+
+  return output_stream.str();
+}
+
+void
+QuadraticSplineSurfacePatch::serialize_to_json_file(std::string filename) const {
+  std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+  output_file << serialize_to_json_string() << std::endl;
+  output_file.close();
+}
+
 
 int
 QuadraticSplineSurfacePatch::dimension() const
@@ -222,7 +253,9 @@ QuadraticSplineSurfacePatch::triangulate(size_t num_refinements,
   // Triangulate the domain
   Eigen::MatrixXd V_domain;
   m_domain.triangulate(num_refinements, V_domain, F);
-
+  // serialize_eigen_matrix_d("spot_control/quadratic_spline_surface_patch/triangulate/V_domain_patch"+std::to_string(V_domain.rows())+".csv", V_domain);
+  // serialize_eigen_matrix_i("spot_control/quadratic_spline_surface_patch/triangulate/F_patch"+std::to_string(F.rows())+".csv", F);
+  // std::cout << "spot_control/quadratic_spline_surface_patch/triangulate/V_domain_patch"+std::to_string(V_domain.rows())+".csv" << std::endl;
   // Lift the domain vertices to the surface and also compute the normals
   V.resize(V_domain.rows(), dimension());
   N.resize(V_domain.rows(), dimension());

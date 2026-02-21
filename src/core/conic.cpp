@@ -63,3 +63,72 @@ operator<<(std::ostream& out, const Conic& F)
   out << F.formatted_conic();
   return out;
 }
+
+// 
+// MY HELPERS HERE
+// 
+
+std::string conictype_to_str(ConicType conic_type) {
+  switch (conic_type) {
+    case ConicType::ellipse: return "ELLIPSE";
+    case ConicType::hyperbola: return "HYPERBOLA";
+    case ConicType::parabola: return "PARABOLA";
+    case ConicType::parallel_lines: return "PARALLEL LINES";
+    case ConicType::intersecting_lines: return "INTERSECTING LINES";
+    case ConicType::line: return "LINE";
+    case ConicType::point: return "POINT";
+    case ConicType::empty: return "EMPTY";
+    case ConicType::plane: return "PLANE";
+    case ConicType::error: return "ERROR";
+    case ConicType::unknown: return "UNKNOWN";
+    default: return "Unreachable Type. ConicType should either be empty, error, or unknown at this point.";
+  }
+}
+
+
+std::string serialize_conic(
+    const Conic& conic)
+{
+    std::stringstream output_stream;
+    int prec = 17;
+
+    output_stream << "{\n";
+    output_stream <<  "  \"degree\": "    << std::to_string(conic.get_degree())    << ",\n";
+    output_stream <<  "  \"dimension\": " << std::to_string(conic.get_dimension()) << ",\n";
+    output_stream <<  "  \"type\": \"" << conictype_to_str(conic.get_type()) << "\",\n";
+    output_stream <<  "  \"numerator_coeffs\": "   << serialize_matrix<2, 2>(conic.get_numerators()) << ",\n";
+    output_stream <<  "  \"denominator_coeffs\": " << serialize_matrix<2, 1>(conic.get_denominator()) << ",\n";
+    output_stream <<  "  \"domain\": {\n";
+    output_stream <<  "    \"t0\": " << std::setprecision(prec) << conic.domain().get_lower_bound() << ",\n";
+    output_stream <<  "    \"t1\": " << std::setprecision(prec) << conic.domain().get_upper_bound() << ",\n";
+    output_stream <<  "    \"bounded_below\": " << std::boolalpha << conic.domain().is_bounded_below() << ",\n";
+    output_stream <<  "    \"bounded_above\": " << std::boolalpha << conic.domain().is_bounded_above() << ",\n";
+    output_stream <<  "    \"open_below\": " << std::boolalpha << conic.domain().is_open_below() << ",\n";
+    output_stream <<  "    \"open_above\": " << std::boolalpha << conic.domain().is_open_above() << "\n";
+    output_stream <<  "  }\n";
+    output_stream <<  "}\n";
+    
+    return output_stream.str();
+}
+
+void serialize_vector_conic(    
+    std::string filename,
+    const std::vector<Conic>& conics)
+{   
+    // auto dir = Paths::function_dir(filename);
+    std::ofstream file(filename, std::ios::out | std::ios::trunc);
+    file << "[";
+
+    for (size_t i = 0; i < conics.size(); ++i) {
+        auto conic = conics.at(i);
+        
+        file << serialize_conic(conic);
+      
+        // Comma and newline to separate Rational Functions
+        if (i < conics.size() - 1)  {
+            file << ",\n";
+        }
+    }
+    file << "]" << std::endl;
+    file.close();
+}

@@ -4,6 +4,78 @@
 #include "twelve_split_spline.h"
 #include "compute_boundaries.h"
 
+
+// ****************
+// My  testing functions
+// ****************
+
+void serialize_corner_data(std::string filename,
+  std::vector<std::array<TriangleCornerFunctionData, 3>> corner_data) {
+  spdlog::info("Writing matrix data to {}", filename);
+  std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+  int prec = 17;
+
+  // Print out by row order
+  for (long unsigned int i = 0; i < corner_data.size(); ++i) {
+      // Printing out the first element of the row separately since we do not want the comma at the start
+      std::array temp = corner_data.at(i);
+      for (Eigen::Index j = 0; j < 3; ++j) {
+          const TriangleCornerFunctionData& triangle_data = temp[j];
+
+          // we print first element since we dont want comma before it (i.e. to the left)
+          // output_file << std::setprecision(prec) << temp(j, 0);
+          const SpatialVector& function_value = triangle_data.function_value;
+          const SpatialVector& first_edge_derivative = triangle_data.first_edge_derivative;
+          const SpatialVector& second_edge_derivative = triangle_data.second_edge_derivative;
+          output_file << std::setprecision(prec) << function_value[0] << "," << function_value[1] << "," << function_value[2] << std::endl;
+          output_file << std::setprecision(prec) << first_edge_derivative[0] << "," << first_edge_derivative[1] << "," << first_edge_derivative[2] << std::endl;
+          output_file << std::setprecision(prec) << second_edge_derivative[0] << "," << second_edge_derivative[1] << "," << second_edge_derivative[2] << std::endl;
+          output_file << std::endl; // double newline between TriangleCornerFunctionData
+
+      }
+      output_file << std::endl; // double newline between TriangleCornerFunctionData
+  }
+
+  output_file.close();
+
+}
+
+void serialize_midpoint_data(std::string filename,
+  std::vector<std::array<TriangleMidpointFunctionData, 3>> midpoint_data) {
+  //
+  // midpoint datais struct with the following: 
+  //  normal_derivative: VectorX
+  // Hence, this prints out
+  // 1, 2, 3, ...
+  // 1, 2, 3, ...
+  // 1, 2, 3, ...
+  // 
+  // 1, 2, 3, ...
+  // 1, 2, 3, ...
+  // 1, 2, 3, ...
+  spdlog::info("Writing matrix data to {}", filename);
+  std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+  int prec = 17;
+
+  // Print out by row order
+  for (long unsigned int i = 0; i < midpoint_data.size(); ++i) {
+      // Printing out the first element of the row separately since we do not want the comma at the start
+      std::array temp = midpoint_data.at(i);
+      for (Eigen::Index j = 0; j < 3; ++j) {
+          // we print first element since we dont want comma before it (i.e. to the left)
+          // output_file << std::setprecision(prec) << temp(j, 0);
+          const SpatialVector& normal_derivative = temp[j].normal_derivative;
+          output_file << std::setprecision(prec) << normal_derivative[0] << "," << normal_derivative[1] << "," << normal_derivative[2] << std::endl;
+      }
+      output_file << std::endl; // double newline between each TriangleMidpointFunctionData
+  }
+  output_file.close();
+}
+
+
+
 TwelveSplitSplineSurface::TwelveSplitSplineSurface(
   const Eigen::MatrixXd& V,
   const AffineManifold& affine_manifold,
@@ -35,7 +107,9 @@ TwelveSplitSplineSurface::TwelveSplitSplineSurface(
                                           fit_derivatives,
                                           fit_matrix,
                                           fit_matrix_inverse);
-
+  // serialize_eigen_vector_d("spot_control/12_split_spline/fit_derivatives.csv", fit_derivatives);
+  // serialize_eigen_matrix_d("spot_control/12_split_spline/fit_matrix_dense.csv", fit_matrix.toDense());
+  
   // Build full energy hessian system
   double energy;
   VectorXr derivatives;
@@ -47,6 +121,10 @@ TwelveSplitSplineSurface::TwelveSplitSplineSurface(
                                           derivatives,
                                           energy_hessian,
                                           energy_hessian_inverse);
+  // serialize_eigen_vector_d("spot_control/12_split_spline/derivatives.csv", derivatives);
+  // serialize_eigen_matrix_d("spot_control/12_split_spline/energy_hessian_dense.csv", energy_hessian.toDense());
+
+                            
 
   // Build optimized corner and midpoint data
   generate_optimized_twelve_split_position_data(V,
@@ -55,10 +133,13 @@ TwelveSplitSplineSurface::TwelveSplitSplineSurface(
                                                 energy_hessian_inverse,
                                                 m_corner_data,
                                                 m_midpoint_data);
+  // serialize_corner_data("spot_control/12_split_spline/corner_data.csv", m_corner_data);
+  // serialize_midpoint_data("spot_control/12_split_spline/midpoint_data.csv", m_midpoint_data);
 
   // Get cone corners
   std::vector<std::array<bool, 3>> is_cone_corner;
   affine_manifold.compute_cones_corners(is_cone_corner);
+  // serialize_vector_array_int("spot_control/12_split_spline/is_cone_corner.csv", is_cone_corner);
 
   // Initialize position data and patches
   init_twelve_split_patches(m_corner_data,
@@ -66,6 +147,9 @@ TwelveSplitSplineSurface::TwelveSplitSplineSurface(
                             is_cone_corner,
                             face_to_patch_indices,
                             patch_to_face_indices);
+  // TODO: grab face_to_patch_indices and patch_to_face_indices into a file
+  // serialize_vector_vector("spot_control/12_split_spline/init_twelve_split_patches/face_to_patch_indices.csv", face_to_patch_indices);
+  // serialize_vector_int("spot_control/12_split_spline/init_twelve_split_patches/patch_to_face_indices.csv", patch_to_face_indices);
 }
 
 TwelveSplitSplineSurface::TwelveSplitSplineSurface(
@@ -169,6 +253,9 @@ TwelveSplitSplineSurface::view(Eigen::Matrix<double, 3, 1> color,
 {
   add_surface_to_viewer(color, num_subdivisions);
   add_position_data_to_viewer();
+  
+  write_spline("spot_control_mesh-cleaned_conf_simplified_with_uv.txt");
+
   polyscope::show();
 }
 
@@ -203,10 +290,12 @@ TwelveSplitSplineSurface::init_twelve_split_patches(
   for (int i = 0; i < patches_per_face; ++i) {
     domains[i] = ConvexPolygon(patch_boundaries[i]);
   }
-
+  // serialize_array_array_matrix("spot_control/12_split_spline/init_twelve_split_patches/patch_boundaries.csv", patch_boundaries);
   // Generate map from patches to input mesh corners
   std::array<std::pair<int, int>, 12> patch_to_corner_map;
   generate_twelve_split_spline_patch_patch_to_corner_map(patch_to_corner_map);
+  // TODO: serialize patch_to_corner_map
+  // serialize_array_pair("spot_control/12_split_spline/init_twelve_split_patches/patch_to_corner_map.csv", patch_to_corner_map);
 
   // Clear face to patch mappings
   face_to_patch_indices.resize(num_faces);
@@ -250,6 +339,10 @@ TwelveSplitSplineSurface::init_twelve_split_patches(
     }
   }
 
+  // Serialize patch_to_face_indices and face_to_patch_indices
+  // serialize_vector_vector("spot_control/12_split_spline/init_twelve_split_patches/face_to_patch_indices.csv", face_to_patch_indices);
+  // serialize_vector_int("spot_control/12_split_spline/init_twelve_split_patches/patch_to_face_indices.csv", patch_to_face_indices);
+
   // Initialize hash tables
   compute_patch_hash_tables();
 }
@@ -281,6 +374,11 @@ TwelveSplitSplineSurface::generate_face_normals(
       N.row(fj) = N_vertices.row(ci);
     }
   }
+
+  // XXX: for hacky testing.
+  // serialize_eigen_matrix_d("spot_control/12_split_spline/generate_face_normals/V.csv", V);
+  // serialize_eigen_matrix_i("spot_control/12_split_spline/generate_face_normals/F.csv", F);
+  // serialize_eigen_matrix_d("spot_control/12_split_spline/generate_face_normals/N.csv", N);
 }
 
 void

@@ -254,6 +254,10 @@ compute_closed_contours(
     contour_start_points[i] = contour_segments[i].start_point();
     contour_end_points[i] = contour_segments[i].end_point();
   }
+  // TESTING
+  serialize_vector_eigen_vector("spot_control/contour_network/compute_closed_contours/compute_closed_contours/contour_start_points.csv", contour_start_points);
+  serialize_vector_eigen_vector("spot_control/contour_network/compute_closed_contours/compute_closed_contours/contour_end_points.csv", contour_end_points);
+
 
   while (true) {
     // Get next starting contour segment to process or return if none left

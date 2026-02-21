@@ -180,6 +180,15 @@ AbstractCurveNetwork::update_topology(
   const std::vector<AbstractCurveNetwork::SegmentIndex>& out_array,
   const std::vector<AbstractCurveNetwork::NodeIndex>& intersection_array)
 {
+  // 
+  // TESTING
+  // 
+  std::string filepath = "spot_control/core/abstract_curve_network/update_topology/";
+  serialize_vector_int(filepath+"to_array.csv", to_array);
+  serialize_vector_int(filepath+"out_array.csv", out_array);
+  serialize_vector_int(filepath+"intersection_array.csv", intersection_array);
+
+
   // Check input validity
   assert(is_valid_minimal_curve_network_data(
     to_array, out_array, intersection_array));
@@ -268,6 +277,22 @@ AbstractCurveNetwork::init_abstract_curve_network()
   build_prev_array(m_to_array, m_out_array, m_prev_array);
   build_from_array(m_to_array, m_out_array, m_from_array);
   build_in_array(m_to_array, m_out_array, m_in_array);
+
+  // *************************************************************
+  // TESTING OF PROJECTED CURVE NETWORK CALL UPDATE_TOPOLOGY()
+  // *************************************************************
+  std::string filepath = "spot_control/core/abstract_curve_network/init_abstract_curve_network/";
+  std::string filepath_1 = "spot_control/core/abstract_curve_network/build_next_array/";
+  std::string filepath_2 = "spot_control/core/abstract_curve_network/build_prev_array/";
+  std::string filepath_3 = "spot_control/core/abstract_curve_network/build_from_array/";
+  std::string filepath_4 = "spot_control/core/abstract_curve_network/build_in_array/";
+  
+  serialize_vector_int(filepath+"to_array.csv", m_to_array);
+  serialize_vector_int(filepath+"out_array.csv", m_out_array);
+  serialize_vector_int(filepath_1+"next_array.csv", m_next_array);
+  serialize_vector_int(filepath_2+"prev_array.csv", m_prev_array);
+  serialize_vector_int(filepath_3+"from_array.csv", m_from_array);
+  serialize_vector_int(filepath_4+"in_array.csv", m_in_array);
 }
 
 // Determine if the index describes a segment of the curve network

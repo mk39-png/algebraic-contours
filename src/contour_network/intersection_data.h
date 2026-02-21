@@ -45,3 +45,38 @@ struct knot_less_than
     return (data_1.knot < data_2.knot);
   }
 };
+
+
+// 
+// 
+// TESTING FUNCTION
+// 
+// 
+inline void serialize_intersection_data(std::string filename, const std::vector<std::vector<IntersectionData>>& contour_intersections) {
+  std::ofstream output_file_0(filename, std::ios::out | std::ios::trunc);
+  output_file_0 << "[\n";
+
+  // Now for every element..
+  for (size_t i = 0; i < contour_intersections.size(); ++i) {
+    output_file_0 << "  [\n"; // start inner array
+    for (size_t j = 0; j < contour_intersections.at(i).size(); ++j) {
+      output_file_0 << "    {\n";
+      output_file_0 << "      \"knot\": " << std::setprecision(17) << contour_intersections.at(i).at(j).knot << ",\n";
+      output_file_0 << "      \"intersection_index\": " + std::to_string(contour_intersections.at(i).at(j).intersection_index) + ",\n";
+      output_file_0 << "      \"intersection_knot\": " << std::setprecision(17) << contour_intersections.at(i).at(j).intersection_knot << ",\n";
+      output_file_0 << "      \"is_base\": " << std::boolalpha << contour_intersections.at(i).at(j).is_base << ",\n";
+      output_file_0 << "      \"is_tip\": " << std::boolalpha << contour_intersections.at(i).at(j).is_tip << ",\n";
+      output_file_0 << "      \"id\": " + std::to_string(contour_intersections.at(i).at(j).id) + ",\n";
+      output_file_0 << "      \"is_redundant\": " << std::boolalpha << contour_intersections.at(i).at(j).is_redundant << "\n";
+      output_file_0 << "    }";
+      if (j + 1 != contour_intersections.at(i).size()) output_file_0 << ",";
+      output_file_0 << "\n";
+    }
+    output_file_0 << "  ]";
+    if (i + 1 != contour_intersections.size()) output_file_0 << ",";
+    output_file_0 << "\n";
+  }
+  output_file_0 << "]\n";
+  output_file_0.close();
+
+}

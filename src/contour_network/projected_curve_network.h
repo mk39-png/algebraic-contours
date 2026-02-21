@@ -70,6 +70,12 @@ public:
     m_segment_labels[label_name] = new_segment_label;
   }
 
+  // MY METHOD FOR TESTING!
+  std::map<std::string, int> get_segment_labels() const
+  {
+    return m_segment_labels;
+  }
+
   int get_segment_label(const std::string& label_name) const
   {
     return m_segment_labels.at(label_name);
@@ -616,3 +622,7 @@ private:
   std::vector<NodeGeometry> m_nodes;
   std::vector<NodeIndex> m_chain_start_nodes;
 };
+
+void serialize_vector_segment_labels(
+  std::string filename, 
+  std::vector<std::map<std::string, int>> segment_labels);

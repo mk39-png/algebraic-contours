@@ -25,9 +25,13 @@ int main(int argc, char *argv[])
     {"off",      spdlog::level::off},
   };
 
+  // To avoid error
+  int placeholder = sizeof(*argv) + argc;
+  std::cout << placeholder << std::endl;
+
   // Get command line arguments
   CLI::App app{"Generate smooth occluding contours for a mesh."};
-  std::string input_filename = "";
+  std::string input_filename = "spot_control_mesh-cleaned_conf_simplified_with_uv.obj";
   std::string output_dir = "./";
   spdlog::level::level_enum log_level = spdlog::level::off;
   Eigen::Matrix<double, 3, 1> color = SKY_BLUE;
@@ -43,7 +47,7 @@ int main(int argc, char *argv[])
     ->check(CLI::PositiveNumber);
   app.add_option("-w,--weight", weight, "Fitting weight for the quadratic surface approximation")
     ->check(CLI::PositiveNumber);
-  CLI11_PARSE(app, argc, argv);
+  // CLI11_PARSE(app, argc, argv);
 
   // Set logger level
   spdlog::set_level(log_level);
@@ -56,6 +60,16 @@ int main(int argc, char *argv[])
   Eigen::MatrixXi F, FT, FN;
   igl::readOBJ(input_filename, V, uv, N, F, FT, FN);
 
+  // Seeing if rows and cols matches with what I have
+  std::cout << "Begin bootleg testing" << std::endl;
+  std::cout << V.rows() << " " << V.cols() << std::endl;
+  std::cout << uv.rows() << " " << uv.cols() << std::endl;
+  std::cout << N.rows() << " " << N.cols() << std::endl;
+  std::cout << F.rows() << " " << F.cols() << std::endl;
+  std::cout << FT.rows() << " " << FT.cols() << std::endl;
+  std::cout << FN.rows() << " " << FN.cols() << std::endl;
+  
+
   // Generate quadratic spline
   spdlog::info("Computing spline surface");
   std::vector<std::vector<int>> face_to_patch_indices;
@@ -65,6 +79,17 @@ int main(int argc, char *argv[])
   Eigen::CholmodSupernodalLLT<Eigen::SparseMatrix<double>>
       energy_hessian_inverse;
   AffineManifold affine_manifold(F, uv, FT);
+
+  // Now seeing affine manifold and if that's all good
+  std::cout << "Affine manifold" << std::endl;
+  std::cout << affine_manifold.num_faces() << std::endl;
+  std::cout << affine_manifold.num_vertices() << std::endl;
+  std::cout << affine_manifold.get_faces().rows() << " " << affine_manifold.get_faces().cols() << std::endl;
+  std::cout << affine_manifold.get_halfedge().num_faces() << std::endl;
+  std::cout << affine_manifold.get_halfedge().num_edges() << std::endl;
+  std::cout << affine_manifold.get_halfedge().num_halfedges() << std::endl;
+  std::cout << affine_manifold.get_halfedge().num_vertices() << std::endl;
+
   TwelveSplitSplineSurface spline_surface(
       V, affine_manifold,
       optimization_params, face_to_patch_indices, patch_to_face_indices,
@@ -72,4 +97,5 @@ int main(int argc, char *argv[])
 
   // View the mesh
   spline_surface.view(color, num_subdivisions);
+  // TODO: check the discretization steps in spline_surface above...
 }

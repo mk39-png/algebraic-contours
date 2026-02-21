@@ -204,6 +204,15 @@ VertexCirculator::VertexCirculator(const Eigen::MatrixXi& F)
                             m_all_vertex_one_rings[i],
                             m_all_face_one_rings[i]);
   }
+
+
+  // NOTE: printing vertex circulator after its call from half_edge (or when it's called again in affine_manifold... 
+  // build_vertex_charts_from_lengths(). Should be the same though since using the same faces F)
+  // std::string filepath = "spot_control/vertex_circulator/";
+  // serialize_eigen_matrix_i(filepath+"F.csv", F);
+  // serialize_vector_vector(filepath+"all_adjacent_faces.csv", m_all_adjacent_faces);
+  // serialize_vector_vector(filepath+"all_vertex_one_rings.csv", m_all_vertex_one_rings);
+  // serialize_vector_vector(filepath+"all_face_one_rings.csv", m_all_face_one_rings);
 }
 
 void

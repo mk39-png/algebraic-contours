@@ -5,6 +5,8 @@
 
 #include "polyscope/curve_network.h"
 
+#include <string>
+#include <sstream>
 #include "common.h"
 #include "interval.h"
 #include "polynomial_function.h"
@@ -474,4 +476,107 @@ operator<<(std::ostream& out, const RationalFunction<degree, dimension>& F)
 {
   out << F.formatted_rational_function();
   return out;
+}
+
+
+
+// 
+// MY HELPERS
+// 
+
+// Returns string of matrix, without any formatting. just a single line of it.
+// This is for formatting numerators and denominator of a Rational Function
+// REMINDER: + 1 because there's the constant and then the variable terms inside the rational function
+// FIXME problem with the function below... causing major compilation errors
+// This prints row-major order, buit in a very werid way...
+// For some reason, using .col rather than direct indexing... or something like that...
+// Why? IDK, I just thought of making this like this for this reason.
+// Is it cumbersome? Very.
+template <size_t degree, size_t dimension>
+std::string serialize_matrix(const Eigen::Matrix<double, degree + 1, dimension> coeffs) {
+    // TODO: check if this is the right order.
+    std::stringstream output_stream;
+    output_stream << "[";
+    int prec = 17;
+
+    // this outer loop below is equivalent to iteration through __dimension__ (e.g. 3)
+    for (long int i = 0; i < coeffs.cols(); ++i) { 
+        output_stream << "[";
+
+        // this loop below is equivalent as iterating through __degree__ (e.g. 4)
+        for (long int j = 0; j < coeffs.rows(); ++j) {
+            // Need to print out to a certain precision.
+            // FIXME: is the below even correct? Like, iterating through a specific row...
+            output_stream << std::setprecision(prec) << coeffs.col(i)[j];
+
+            // Ensuring not putting a comma on the last element in the row as to avoid trailing commas
+            if (j < coeffs.rows() - 1) {
+              output_stream << ",";
+            }
+        }
+        output_stream << "]";
+
+
+        // We do not want a comma on the last inner array though.
+        // So, make sure that we are not placing comma for 1D matrices.
+        // And also making sure not placing comma at the end of the last inner array.
+        if ((coeffs.rows() > 1) && (i < coeffs.cols() - 1)) {
+            output_stream << ", ";
+        }
+    }
+    output_stream << "]";
+
+
+    return output_stream.str();
+}
+
+
+// Turns a rational function into JSON file.
+template <size_t degree, size_t dimension>
+std::string serialize_rational_function(
+    const RationalFunction<degree, dimension>& rational_function)
+{
+    std::stringstream output_stream;
+    int prec = 17;
+
+    output_stream << "{\n";
+    output_stream <<  "  \"degree\": "    << std::to_string(rational_function.get_degree())    << ",\n";
+    output_stream <<  "  \"dimension\": " << std::to_string(rational_function.get_dimension()) << ",\n";
+    output_stream <<  "  \"numerator_coeffs\": "   << serialize_matrix<degree, dimension>(rational_function.get_numerators()) << ",\n";
+    output_stream <<  "  \"denominator_coeffs\": " << serialize_matrix<degree, 1>(rational_function.get_denominator()) << ",\n";
+    output_stream <<  "  \"domain\": {\n";
+    output_stream <<  "    \"t0\": " << std::setprecision(prec) << rational_function.domain().get_lower_bound() << ",\n";
+    output_stream <<  "    \"t1\": " << std::setprecision(prec) << rational_function.domain().get_upper_bound() << ",\n";
+    output_stream <<  "    \"bounded_below\": " << std::boolalpha << rational_function.domain().is_bounded_below() << ",\n";
+    output_stream <<  "    \"bounded_above\": " << std::boolalpha << rational_function.domain().is_bounded_above() << ",\n";
+    output_stream <<  "    \"open_below\": " << std::boolalpha << rational_function.domain().is_open_below() << ",\n";
+    output_stream <<  "    \"open_above\": " << std::boolalpha << rational_function.domain().is_open_above() << "\n";
+    output_stream <<  "  }\n";
+    output_stream <<  "}\n";
+    
+    return output_stream.str();
+}
+
+
+
+template <size_t degree, size_t dimension>
+void serialize_vector_rational_function(    
+    std::string filename,
+    const std::vector<RationalFunction<degree, dimension>>& rational_functions)
+{
+    std::ofstream file(filename, std::ios::out | std::ios::trunc);
+    file << "[";
+
+    for (size_t i = 0; i < rational_functions.size(); ++i) {
+        auto rational_function = rational_functions.at(i);
+        
+        file << serialize_rational_function<degree, dimension>(rational_function);
+      
+        // Comma and newline to separate Rational Functions
+        if (i < rational_functions.size() - 1)  {
+            file << ",\n";
+        }
+    }
+    file << "]" << std::endl;
+    file.close();
 }

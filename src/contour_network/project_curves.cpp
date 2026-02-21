@@ -41,4 +41,11 @@ project_curves(const std::vector<RationalFunction<4, 3>>& spatial_curves,
   for (size_t i = 0; i < num_curves; ++i) {
     project_curve(spatial_curves[i], frame, planar_curves[i]);
   }
+
+  //
+  // TESTING
+  //
+  serialize_vector_rational_function<4, 3>("spot_control/contour_network/project_curves/spatial_curves.json", spatial_curves);
+  serialize_eigen_matrix_d("spot_control/contour_network/project_curves/frame.csv", frame);
+  serialize_vector_rational_function<4, 2>("spot_control/contour_network/project_curves/planar_curves.json", planar_curves);
 }

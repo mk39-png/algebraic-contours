@@ -124,12 +124,31 @@ Halfedge::Halfedge(
 
   // Build maps between edges and halfedges
   build_halfedge_to_edge_maps(m_opp, m_he2e, m_e2he);
+  // NOTE: this builds m_he2e and m_e2he...
 
   // Set sizes
   m_num_halfedges = num_halfedges;
   m_num_faces = num_faces;
   m_num_vertices = num_vertices;
   m_num_edges = m_e2he.size();
+  
+  // NOTE: my code below to save halfedge info to file.
+  // NOTE: corner_to_he and he_to_corner refer to m_... are they start out unitialized till being passed into build_corner_to_he_maps.
+  std::string filepath = "spot_control/halfedge/";
+  // serialize_vector_vector(filepath+"corner_to_he.csv", corner_to_he);
+  // serialize_vector_pair_index(filepath+"he_to_corner.csv", he_to_corner);
+  // serialize_vector_int(filepath+"next.csv", m_next);
+  // serialize_vector_int(filepath+"face.csv", m_face);
+  // serialize_vector_int(filepath+"to.csv", m_to);
+  // serialize_vector_int(filepath+"from.csv", m_from);
+  // serialize_vector_int(filepath+"out.csv", m_out);
+  // serialize_vector_int(filepath+"f2he.csv", m_f2he);
+  // serialize_vector_int(filepath+"opp.csv", m_opp);
+  // vertex_circulator; // NOTE: vertex circulator serialized when it's constructed in this file.
+  // serialize_vector_int(filepath+"he2e.csv", m_he2e);
+  // serialize_vector_pair_index(filepath+"e2he.csv", m_e2he);
+
+
 
   // Check validity
 #if CHECK_VALIDITY
@@ -139,4 +158,7 @@ Halfedge::Halfedge(
     return;
   }
 #endif
+
+
+
 }

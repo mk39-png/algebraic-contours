@@ -400,8 +400,28 @@ compute_twelve_split_energy_quadratic(
   std::vector<Eigen::Triplet<double>> hessian_entries;
   hessian_entries.reserve(36 * num_independent_variables);
 
+  // TODO: testing... start the out file right here...
+  std::string filepath = "spot_control/optimize_spline_surface/compute_twelve_split_energy_quadratic/";
+  std::string filepath_shifted = "spot_control/optimize_spline_surface/compute_twelve_split_energy_quadratic/";
+
+  // Need to account for the fact that there is also the non-fit version...
+  if (float_equal_zero(optimization_params.parametrized_quadratic_surface_mapping_factor)) {
+    filepath += "fit/";
+    filepath_shifted += "fit_shifted/";
+  } else {
+    filepath += "full/";
+
+    filepath_shifted += "full_shifted/";
+  }
+
+  std::cout << filepath << std::endl;
+
   for (AffineManifold::Index face_index = 0; face_index < manifold.num_faces();
        ++face_index) {
+
+    // TESTING: file extension.
+    std::string extension = "face_index_" + std::to_string(face_index) + ".csv";
+
     // Get face vertices
     Eigen::MatrixXi const& F = manifold.get_faces();
     int i = F(face_index, 0);
@@ -417,6 +437,7 @@ compute_twelve_split_energy_quadratic(
     edge_gradients_T = edge_gradients[face_index];
     build_face_variable_vector(
       initial_vertex_positions, i, j, k, initial_vertex_positions_T);
+      
 
     // Get the global uv values for the face vertices
     std::array<PlanarPoint, 3> face_vertex_uv_positions;
@@ -461,6 +482,20 @@ compute_twelve_split_energy_quadratic(
     build_face_variable_vector(
       global_vertex_indices, i, j, k, face_global_vertex_indices);
     face_global_edge_indices = global_edge_indices[face_index];
+    
+    // NOTE: below encompasses the 4 things above
+    // serialize_array_matrix_d(filepath+"vertex_positions_T/"+extension, vertex_positions_T);
+    // serialize_array_matrix_d(filepath+"vertex_gradients_T/"+extension, vertex_gradients_T);
+    // serialize_array_matrix_d(filepath+"edge_gradients_T/"+extension, edge_gradients_T);
+    // serialize_array_matrix_d(filepath+"initial_vertex_positions_T/"+extension, initial_vertex_positions_T);
+    // 
+    // serialize_array_matrix_d(filepath+"face_vertex_uv_positions/"+extension, face_vertex_uv_positions);
+    // serialize_array_matrix_d(filepath+"corner_to_corner_uv_positions/"+extension, corner_to_corner_uv_positions);
+    // serialize_array(filepath+"reverse_edge_orientations/"+extension, reverse_edge_orientations);
+    // serialize_array(filepath+"is_cone/"+extension, is_cone);
+    // serialize_array(filepath+"is_cone_adjacent/"+extension, is_cone_adjacent);
+    // serialize_array(filepath+"face_global_vertex_indices/"+extension, face_global_vertex_indices);
+    // serialize_array(filepath+"face_global_edge_indices/"+extension, face_global_edge_indices);
 
     // Check if an edge is collapsing and make sure any collapsing edges have
     // local vertex indices 0 and 1
@@ -487,6 +522,18 @@ compute_twelve_split_energy_quadratic(
         break;
       }
     }
+    
+    // serialize_array_matrix_d(filepath_shifted+"vertex_positions_T/"+extension, vertex_positions_T);
+    // serialize_array_matrix_d(filepath_shifted+"vertex_gradients_T/"+extension, vertex_gradients_T);
+    // serialize_array_matrix_d(filepath_shifted+"edge_gradients_T/"+extension, edge_gradients_T);
+    // serialize_array_matrix_d(filepath_shifted+"initial_vertex_positions_T/"+extension, initial_vertex_positions_T);
+    // serialize_array_matrix_d(filepath_shifted+"face_vertex_uv_positions/"+extension, face_vertex_uv_positions);
+    // serialize_array_matrix_d(filepath_shifted+"corner_to_corner_uv_positions/"+extension, corner_to_corner_uv_positions);
+    // serialize_array(filepath_shifted+"reverse_edge_orientations/"+extension, reverse_edge_orientations);
+    // serialize_array(filepath_shifted+"is_cone/"+extension, is_cone);
+    // serialize_array(filepath_shifted+"is_cone_adjacent/"+extension, is_cone_adjacent);
+    // serialize_array(filepath_shifted+"face_global_vertex_indices/"+extension, face_global_vertex_indices);
+    // serialize_array(filepath_shifted+"face_global_edge_indices/"+extension, face_global_edge_indices);
 
     // Get normal for the face
     SpatialVector normal;
@@ -537,6 +584,24 @@ compute_twelve_split_energy_quadratic(
       local_derivatives,
       local_hessian);
 
+    // serialize_eigen_vector_d(filepath+"normal/"+extension, normal);
+    // serialize_vector_int(filepath+"local_to_global_map/"+extension, local_to_global_map);
+    // serialize_eigen_matrix_d(filepath+"local_hessian_data_H_f/"+extension, local_hessian_data.H_f);
+    // serialize_eigen_matrix_d(filepath+"local_hessian_data_H_s/"+extension, local_hessian_data.H_s);
+    // serialize_eigen_matrix_d(filepath+"local_hessian_data_H_p/"+extension, local_hessian_data.H_p);
+    // if (face_index == (manifold.num_faces() - 1)) {
+    //   std::cout << "last iteration 1 fit local hessian data w_f: " << local_hessian_data.w_f << std::endl;
+    //   std::cout << "last iteration 1 fit local hessian data w_s: " << local_hessian_data.w_s << std::endl;
+    //   std::cout << "last iteration 1 fit local hessian data w_p: " << local_hessian_data.w_p << std::endl;
+    // }
+    // serialize_eigen_matrix_d(filepath+"local_dof_data_r_alpha_0/"+extension, local_dof_data.r_alpha_0);
+    // serialize_eigen_matrix_d(filepath+"local_dof_data_r_alpha/"+extension, local_dof_data.r_alpha);
+    // serialize_eigen_matrix_d(filepath+"local_dof_data_r_alpha_flat/"+extension, local_dof_data.r_alpha_flat);
+    // TODO: save local energies to file...
+    // std::cout << "last iteration 1 fit local energy last iter: " << local_energy << std::endl;
+    // serialize_eigen_matrix_d(filepath+"local_derivatives/"+extension, local_derivatives);
+    // serialize_eigen_matrix_d(filepath+"local_hessian/"+extension, local_hessian);
+
     // Update energy quadratic with the new face energy
     update_energy_quadratic<TwelveSplitGradient, TwelveSplitHessian>(
       local_energy,
@@ -547,6 +612,18 @@ compute_twelve_split_energy_quadratic(
       derivatives,
       hessian_entries);
   }
+
+  // Finally, testing the outputs of update_energy_quadratic()
+  // if (float_equal_zero(optimization_params.parametrized_quadratic_surface_mapping_factor)) {
+  //   std::cout << "last iteration 1 fit GLOBAL energy last iter: " << energy << std::endl;
+  //   serialize_eigen_vector_d("spot_control/optimize_spline_surface/compute_twelve_split_energy_quadratic/fit/derivatives_energy_quadratic.csv", derivatives);
+  //   serialize_vector_triplets("spot_control/optimize_spline_surface/compute_twelve_split_energy_quadratic/fit/hessian_entries_energy_quadratic.csv", hessian_entries);
+  // } else {
+  //   std::cout << "last iteration 2 GLOBAL energy last iter: " << energy << std::endl;
+  //   serialize_eigen_vector_d("spot_control/optimize_spline_surface/compute_twelve_split_energy_quadratic/full/derivatives_energy_quadratic.csv", derivatives);
+  //   serialize_vector_triplets("spot_control/optimize_spline_surface/compute_twelve_split_energy_quadratic/full/hessian_entries_energy_quadratic.csv", hessian_entries);
+  // }
+
 
   // Set hessian from the triplets
   hessian.resize(num_independent_variables, num_independent_variables);
@@ -628,7 +705,19 @@ build_twelve_split_spline_energy_system(
   // Build halfedge
   std::vector<std::pair<Eigen::Index, Eigen::Index>> he_to_corner =
     affine_manifold.get_he_to_corner();
+  
+  // TEST:
+  // if (float_equal_zero(optimization_params.parametrized_quadratic_surface_mapping_factor)) { 
+  //   serialize_vector_pair_index("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/fit/he_to_corner.csv", he_to_corner);
+  // } else {
+  //   serialize_vector_pair_index("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/full/he_to_corner.csv", he_to_corner);
+  // }
+
   Halfedge const& halfedge = affine_manifold.get_halfedge();
+  // TODO: try to test halfedge... which may be involved since it doesnt have any good getters 
+  // NOTE: cannot get faces from halfedge since there is no getter for it
+  // serialize_eigen_matrix_i(halfedge.)
+  // TODO: check num_edges
   int num_edges = halfedge.num_edges();
 
   // Assume all vertices and edges are variable
@@ -637,6 +726,13 @@ build_twelve_split_spline_energy_system(
   std::vector<int> variable_vertices, variable_edges;
   index_vector_complement<int>(fixed_vertices, num_vertices, variable_vertices);
   index_vector_complement<int>(fixed_edges, num_edges, variable_edges);
+  // if (float_equal_zero(optimization_params.parametrized_quadratic_surface_mapping_factor)) { 
+  //   serialize_vector_int("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/fit/variable_vertices.csv", variable_vertices);
+  //   serialize_vector_int("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/fit/variable_edges.csv", variable_edges);
+  // } else {
+  //   serialize_vector_int("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/full/variable_vertices.csv", variable_vertices);
+  //   serialize_vector_int("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/full/variable_edges.csv", variable_edges);
+  // }
 
   // Get variable counts
   int num_variable_vertices = variable_vertices.size();
@@ -653,16 +749,40 @@ build_twelve_split_spline_energy_system(
   std::vector<std::array<SpatialVector, 3>> edge_gradients;
   generate_zero_vertex_gradients(num_vertices, vertex_gradients);
   generate_zero_edge_gradients(num_faces, edge_gradients);
+  // TODO: test vertex and edge gradients????
+  // But they're just generating zero...
+  // if (float_equal_zero(optimization_params.parametrized_quadratic_surface_mapping_factor)) { 
+  //   serialize_vector_eigen_vector("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/fit/vertex_positions.csv", vertex_positions);
+  //   serialize_vector_eigen_vector("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/fit/initial_vertex_positions.csv", initial_vertex_positions);
+  //   serialize_vector_matrix_d("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/fit/vertex_gradients.csv", vertex_gradients);
+  //   serialize_vector_array_spatialvector_3("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/fit/edge_gradients.csv", edge_gradients);
+  // } else {
+  //   serialize_vector_eigen_vector("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/full/vertex_positions.csv", vertex_positions);
+  //   serialize_vector_eigen_vector("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/full/initial_vertex_positions.csv", initial_vertex_positions);
+  //   serialize_vector_matrix_d("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/full/vertex_gradients.csv", vertex_gradients);
+  //   serialize_vector_array_spatialvector_3("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/full/edge_gradients.csv", edge_gradients);
+  // }
 
   // Build vertex variable indices
   std::vector<int> global_vertex_indices;
   build_variable_vertex_indices_map(
     num_vertices, variable_vertices, global_vertex_indices);
+  // if (float_equal_zero(optimization_params.parametrized_quadratic_surface_mapping_factor)) { 
+  //   serialize_vector_int("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/fit/global_vertex_indices.csv", global_vertex_indices);
+  // } else {
+  //   serialize_vector_int("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/full/global_vertex_indices.csv", global_vertex_indices);
+  // }
+
 
   // Build edge variable indices
   std::vector<std::array<int, 3>> global_edge_indices;
   build_variable_edge_indices_map(
     num_faces, variable_edges, halfedge, he_to_corner, global_edge_indices);
+  // if (float_equal_zero(optimization_params.parametrized_quadratic_surface_mapping_factor)) { 
+  //   serialize_vector_array_int("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/fit/global_edge_indices.csv", global_edge_indices);
+  // } else {
+  //   serialize_vector_array_int("spot_control/optimize_spline_surface/build_twelve_split_spline_energy_system/full/global_edge_indices.csv", global_edge_indices);
+  // }
 
   // Build energy for the affine manifold
   compute_twelve_split_energy_quadratic(vertex_positions,
@@ -727,9 +847,18 @@ optimize_twelve_split_spline_surface(
                                               initial_variable_values);
   spdlog::trace("Initial variable value vector:\n{}", initial_variable_values);
 
+  std::string filepath = "spot_control/optimize_spline_surface/optimize_twelve_split_spline_surface/";
+  // serialize_eigen_vector_d(filepath+"initial_variable_values.csv", initial_variable_values);
+
   // Solve hessian system to get optimized values
   VectorXr right_hand_side = fit_matrix * initial_variable_values;
   VectorXr optimized_variable_values = hessian_inverse.solve(right_hand_side);
+  // serialize_eigen_vector_d(filepath+"right_hand_side.csv", right_hand_side);
+  // serialize_eigen_vector_d(filepath+"optimized_variable_values.csv", optimized_variable_values);
+
+  std::cout << "has nan? rhs " << right_hand_side.array().isNaN().any() << std::endl;
+  std::cout << "has nan? opt var val " << optimized_variable_values.array().isNaN().any() << std::endl;
+
 
   // Update variables
   std::vector<SpatialVector> optimized_vertex_positions = vertex_positions;
@@ -745,12 +874,18 @@ optimize_twelve_split_spline_surface(
                                  halfedge,
                                  he_to_corner,
                                  optimized_edge_gradients);
+  
+  // serialize_vector_eigen_vector(filepath+"optimized_vertex_positions.csv", optimized_vertex_positions);
+  // serialize_vector_matrix_d(filepath+"optimized_vertex_gradients.csv", optimized_vertex_gradients);
+  // serialize_vector_array_spatialvector_3(filepath+"optimized_edge_gradients.csv", optimized_edge_gradients);
 
   // Copy variable values to constants
   optimized_V.resize(num_vertices, 3);
   for (int i = 0; i < num_vertices; ++i) {
     optimized_V.row(i) = optimized_vertex_positions[i];
   }
+
+  // serialize_eigen_vector_d(filepath+"optimized_V.csv", optimized_V);
 }
 
 void
@@ -797,6 +932,7 @@ generate_optimized_twelve_split_position_data(
   // Build corner position data from the optimized gradients
   generate_affine_manifold_corner_data(
     optimized_V, affine_manifold, optimized_vertex_gradients, corner_data);
+  // TEST this is printed OTUSIDE...
 
   // Build the full edge gradients with first gradient determined by the corner
   // position data
@@ -806,9 +942,20 @@ generate_optimized_twelve_split_position_data(
                                          affine_manifold,
                                          optimized_edge_gradients);
 
+  std::string filepath="spot_control/optimize_spline_surface/generate_optimized_twelve_split_position_data/";
+  // serialize_vector_int(filepath+"variable_vertices.csv", variable_vertices);
+  // serialize_vector_int(filepath+"variable_edges.csv", variable_edges);
+  // serialize_eigen_matrix_d(filepath+"optimized_V.csv", optimized_V);
+  // serialize_vector_matrix_d(filepath+"optimized_vertex_gradients.csv", optimized_vertex_gradients);
+  // serialize_vector_array_spatialvector_3(filepath+"optimized_reduced_edge_gradients.csv", optimized_reduced_edge_gradients);
+  // serialize_vector_array_matrix_d(filepath+"optimized_edge_gradients.csv", optimized_edge_gradients);
+  // TODO: print optimized_reduced_edge_gradients...
+  // optimized_reduced_edge_gradients
+                                        
   // Build midpoint position data from the optimized gradients
   generate_affine_manifold_midpoint_data(
     affine_manifold, optimized_edge_gradients, midpoint_data);
+  // TEST this is printed OUTSIDE....
 }
 
 void

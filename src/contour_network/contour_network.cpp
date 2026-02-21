@@ -17,12 +17,22 @@ build_contour_labels(
   const std::vector<bool>& contour_is_boundary,
   std::vector<std::map<std::string, int>>& contour_segment_labels)
 {
+  // Testing
+  std::string filepath = "spot_control/contour_network/contour_network/build_contour_labels/";
+  serialize_vector_int(filepath+"contour_patch_indices.csv", contour_patch_indices);
+  serialize_vector_int(filepath+"contour_is_boundary.csv", contour_is_boundary);
+
+  
   size_t num_segments = contour_patch_indices.size();
   contour_segment_labels.resize(num_segments);
   for (size_t i = 0; i < num_segments; ++i) {
     contour_segment_labels[i]["surface_patch"] = contour_patch_indices[i];
     contour_segment_labels[i]["is_boundary"] = contour_is_boundary[i] ? 0 : 1;
   }
+
+  // testing
+  serialize_vector_segment_labels(filepath+"contour_segment_labels.json", contour_segment_labels);
+
 }
 
 ContourNetwork::ContourNetwork()
@@ -185,6 +195,16 @@ ContourNetwork::init_contour_network(
   std::vector<int> contour_labels;
   compute_closed_contours(contour_segments, contours, contour_labels);
 
+  // 
+  // TESTING (out here because compute_closed_contours() does not have return at the bottom...
+  //  as in main return is in while loop)
+  // 
+  std::string filepath_compute_closed_contours = "spot_control/contour_network/compute_closed_contours/compute_closed_contours/";
+  serialize_vector_rational_function<4, 3>(filepath_compute_closed_contours+"contour_segments.json", contour_segments);
+  serialize_vector_vector(filepath_compute_closed_contours+"contours.csv", contours);
+  serialize_vector_int(filepath_compute_closed_contours+"contour_labels.csv", contour_labels);
+
+
   // Pad contour domains by an epsilon
   pad_contours(contour_domain_curve_segments,
                contour_segments,
@@ -282,6 +302,9 @@ ContourNetwork::init_contour_network(
   // Compute the quantitative invisibility
   timer.start();
   compute_quantitative_invisibility(spline_surface, invisibility_params);
+
+  // TODO: serialize QI results
+
   compute_visibility_time = timer.getElapsedTime();
   timer.stop();
 }
@@ -309,8 +332,21 @@ ContourNetwork::compute_quantitative_invisibility_from_ray_intersections(
   const SpatialVector& point,
   const std::vector<double>& ray_intersections) const
 {
+  // TESTING : get inputs 
+  // static size_t counter = 0;
+  // std::string filepath = "spot_control/contour_network/contour_network/compute_quantitative_invisibility_from_ray_intersections/";
+  // serialize_eigen_matrix_d(filepath+"ray_mapping_coeffs/"+std::to_string(counter)+".csv", ray_mapping_coeffs);
+  // serialize_eigen_vector_d(filepath+"point/"+std::to_string(counter)+".csv", point);
+  // serialize_vector_int(filepath+"ray_intersections/"+std::to_string(counter)+".csv", ray_intersections);
+
+
+
   // Partition intersections into points above and below the sample point
   if (ray_intersections.empty()) {
+    // TESTING: serialize output
+    // serialize_vector_int(filepath+"qi_poll_element/"+std::to_string(counter)+".csv", std::vector{0});
+    // counter++;
+
     return 0;
   } else {
     std::vector<double> ray_intersections_below;
@@ -320,6 +356,10 @@ ContourNetwork::compute_quantitative_invisibility_from_ray_intersections(
                                 ray_intersections,
                                 ray_intersections_below,
                                 ray_intersections_above);
+
+    // TESTING: serialize output
+    // serialize_vector_int(filepath+"qi_poll_element/"+std::to_string(counter)+".csv", std::vector{ray_intersections_below.size()});
+    // counter++;
 
     // Set QI as the number of intersection points occluding the sample point
     return ray_intersections_below.size();
@@ -349,18 +389,42 @@ ContourNetwork::compute_segment_quantitative_invisibility(
   RationalFunction<4, 3> const& spatial_curve =
     segment_spatial_curve(segment_index);
 
+
+  // TESTING - VALUE
+  static size_t counter = 0;
+
   std::array<double, 3> sample_parameters = { 0.5, 0.25, 0.75 };
   for (size_t i = 0; i < 3; ++i) {
     // Sample a point on the contour
     SpatialVector sample_point;
+
+
+    // 
+    // TESTING
+    // 
+    std::string filepath3 = "spot_control/core/rational_function/evaluate_normalized_coordinate/";
+    serialize_vector_rational_function<4, 3>(filepath3+"spatial_curve/"+std::to_string(counter)+".csv", std::vector{spatial_curve});
+    serialize_vector_int(filepath3+"sample_parameter/"+std::to_string(counter)+".csv", std::vector{sample_parameters[i]});
     spatial_curve.evaluate_normalized_coordinate(sample_parameters[i],
                                                  sample_point);
+    serialize_eigen_vector_d(filepath3+"sample_point/"+std::to_string(counter)+".csv", sample_point);
+
+
     spdlog::trace("Sample point: {}", sample_point);
 
     // Build ray mapping coefficients
     Matrix2x3r ray_mapping_coeffs;
     generate_ray_mapping_coeffs(sample_point, ray_mapping_coeffs);
     spdlog::trace("Ray mapping coefficients: {}", ray_mapping_coeffs);
+    
+    // 
+    // TESTING
+    // 
+    std::string filepath4 = "spot_control/contour_network/contour_network/generate_ray_mapping_coeffs/";
+    serialize_eigen_vector_d(filepath4+"sample_point/"+std::to_string(counter)+".csv", sample_point);
+    serialize_eigen_matrix_d(filepath4+"ray_mapping_coeffs/"+std::to_string(counter)+".csv", ray_mapping_coeffs);
+
+
 
     // Compute intersections of the ray with the surface
     std::vector<QuadraticSplineSurface::PatchIndex> patch_indices;
@@ -382,9 +446,20 @@ ContourNetwork::compute_segment_quantitative_invisibility(
                                              ray_int_call,
                                              ray_bbox_call);
 
+      
+    //  TESTING - get values
+    std::string filepath = "spot_control/contour_network/contour_network/compute_quantitative_invisibility_from_ray_intersections/";
+    serialize_eigen_matrix_d(filepath+"ray_mapping_coeffs/"+std::to_string(counter)+".csv", ray_mapping_coeffs);
+    serialize_eigen_vector_d(filepath+"point/"+std::to_string(counter)+".csv", sample_point);
+    serialize_vector_int(filepath+"ray_intersections/"+std::to_string(counter)+".csv", ray_intersections);
+
     // Compute the QI from the ray intersections
     qi_poll[i] = compute_quantitative_invisibility_from_ray_intersections(
       ray_mapping_coeffs, sample_point, ray_intersections);
+
+    //  TESTING - get values
+    serialize_vector_int(filepath+"qi_poll_element/"+std::to_string(counter)+".csv", std::vector{qi_poll[i]});
+    counter++;
 
     // If no polling, return after first computation
     if (!invisibility_params.poll_segment_points) {
@@ -1170,15 +1245,31 @@ void
 ContourNetwork::compute_chained_quantitative_invisibility(
   const QuadraticSplineSurface& spline_surface,
   const InvisibilityParameters& invisibility_params)
-{
+{ 
   // Compute QI for all segment chains independently
   std::vector<int> const& chain_start_nodes = get_chain_start_nodes();
+  
+  // TESTING
+  std::string filepath = "spot_control/contour_network/contour_network/compute_chained_quantitative_invisibility/";
+  serialize_vector_int(filepath+"chain_start_nodes.csv", chain_start_nodes);
+
+
   for (size_t i = 0; i < chain_start_nodes.size(); ++i) {
     // Compute QI for the first segment
     NodeIndex start_node_index = chain_start_nodes[i];
+    // TESTING
+    serialize_vector_int(filepath+"start_node_index/"+std::to_string(i)+".csv", std::vector{start_node_index});
+
     SegmentIndex start_segment_index = out(start_node_index);
+    // TESTING
+    serialize_vector_int(filepath+"start_segment_index/"+std::to_string(i)+".csv", std::vector{start_segment_index});
+
     int qi_start = compute_chain_quantitative_invisibility(
       spline_surface, start_segment_index, invisibility_params);
+    // TESTING
+    serialize_vector_int(filepath+"qi_start/"+std::to_string(i)+".csv", std::vector{qi_start});
+
+
     set_segment_quantitative_invisibility(start_segment_index, qi_start);
 
     // Propagate the QI to the other chain segments
@@ -1267,10 +1358,18 @@ ContourNetwork::compute_quantitative_invisibility(
   // Check for errors in the QI
   std::vector<int> quantitative_invisibility;
   enumerate_quantitative_invisibility(quantitative_invisibility);
+
+  
   SPDLOG_TRACE(formatted_vector(quantitative_invisibility, ", "));
   if (vector_contains(quantitative_invisibility, -1)) {
     spdlog::error("Negative QI present in final values");
   }
+
+  // ----------------
+  // TESTING
+  // ----------------
+  std::string filepath_qi = "spot_control/contour_network/compute_quantitative_invisibility/";
+  serialize_vector_int(filepath_qi+"quantitative_invisibility.csv", quantitative_invisibility);
 }
 
 // View all local features in the contour network

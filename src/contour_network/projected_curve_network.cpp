@@ -11,6 +11,151 @@
 #include "generate_colormap.h"
 #include "write_output.h"
 
+
+
+
+
+
+
+// 
+// 
+// MY TEST FUNCTIONS
+// 
+// 
+// Writes to output stream
+std::string serialize_node_geometry(NodeGeometry node) {
+  std::stringstream output_stream;
+
+  output_stream << "{\n";
+  output_stream << "  \"node_type\": " << "\"" << node.formatted_node() << "\"" << ",\n";
+  output_stream << "  \"quantitative_invisibility\": " << node.get_quantitative_invisibility() << ",\n";
+  output_stream << "  \"qi_set\": " << std::boolalpha << node.quantitative_invisibility_is_set() << "\n";
+  output_stream << "}";
+
+  return output_stream.str();
+}
+
+inline void serialize_vector_node_geometry(
+  std::string filename,
+  std::vector<NodeGeometry> nodes) 
+{
+
+  std::ofstream file(filename, std::ios::out | std::ios::trunc);
+  file << "[\n";
+
+  for (size_t i = 0; i < nodes.size(); ++i) {
+      NodeGeometry node = nodes.at(i);
+      
+      file << serialize_node_geometry(node);
+    
+      // Comma and newline to separate Rational Functions
+      if (i < nodes.size() - 1)  {
+          file << ",\n";
+      }
+  }
+  file << "]\n" << std::endl;
+  file.close();
+}
+
+std::string serialize_segment_labels(std::map<std::string, int> segment_labels) {
+  std::stringstream output_stream;
+
+  output_stream << "{\n";
+  
+  std::map<std::string, int>::iterator it;
+  for (it = segment_labels.begin(); it != segment_labels.end(); ++it) { 
+    output_stream << "    \"" << it->first << "\": " << it->second; 
+
+    // assuming that surface_patch is the last key
+    if (it->first == "surface_patch") {
+      output_stream << "\n";
+    } else {
+      output_stream << ",\n";
+    }
+
+    // avoiding trailing comma by  checking the next iteration and seeing if its the end
+    // if (++it != segment_labels.end()) {
+      // --it; // reverse the increment we did during the conditional check.
+      // output_stream << ",\n";
+    // } else {
+      // output_stream << "\n";
+    // }
+  }
+  output_stream << "}\n";
+
+  return output_stream.str();
+}
+
+
+void serialize_vector_segment_labels(
+  std::string filename, 
+  std::vector<std::map<std::string, int>> segment_labels 
+) {
+  std::ofstream file(filename, std::ios::out | std::ios::trunc);
+  file << "[\n";
+
+  for (size_t i = 0; i < segment_labels.size(); ++i) {
+      std::map<std::string, int> segment_label = segment_labels.at(i);
+      
+      file << serialize_segment_labels(segment_label);
+    
+      // Comma and newline to separate Rational Functions
+      if (i < segment_labels.size() - 1)  {
+          file << ",\n";
+      }
+  }
+  file << "]\n" << std::endl;
+  file.close();
+}
+
+
+
+std::string serialize_segment_geometry(SegmentGeometry segment) {
+  std::stringstream output_stream;
+
+  output_stream << "{\n";
+  output_stream << "  \"planar_curve\": " << serialize_rational_function<4,2>(segment.get_planar_curve()) << ",\n";
+  output_stream << "  \"spatial_curve\": " << serialize_rational_function<4,3>(segment.get_spatial_curve()) << ",\n";
+  output_stream << "  \"parameter_curve\": " << serialize_conic(segment.get_parameter_curve()) << ",\n";
+  output_stream << "  \"segment_labels\": " << serialize_segment_labels(segment.get_segment_labels()) << ",\n";
+  output_stream << "  \"quantitative_invisibility\": " << segment.get_quantitative_invisibility() << "\n";
+  output_stream << "}\n";
+
+  return output_stream.str();
+}
+
+
+inline void serialize_vector_segment_geometry(
+  std::string filename, 
+  std::vector<SegmentGeometry> segments
+) {
+  std::ofstream file(filename, std::ios::out | std::ios::trunc);
+  file << "[\n";
+
+  for (size_t i = 0; i < segments.size(); ++i) {
+      SegmentGeometry segment = segments.at(i);
+      
+      file << serialize_segment_geometry(segment);
+    
+      // Comma and newline to separate Rational Functions
+      if (i < segments.size() - 1)  {
+          file << ",\n";
+      }
+  }
+  file << "]\n";
+  file.close();
+}
+
+// 
+// END OF TEST FUNCTIONS
+// 
+
+
+
+
+
+
+
 // Initialize the curve network without intersections directly from the input
 // curve data, marking cusps between boundaries.
 // FIXME Rename to indicate no cusps either
@@ -27,6 +172,19 @@ build_projected_curve_network_without_intersections(
   std::vector<SegmentGeometry>& segments,
   std::vector<NodeGeometry>& nodes)
 {
+  // 
+  // TESTING
+  // 
+  std::string filepath = "spot_control/contour_network/projected_curve_network/build_projected_curve_network_without_intersections/";
+  serialize_vector_conic(filepath+"parameter_segments.json", parameter_segments);
+  serialize_vector_rational_function<4, 3>(filepath+"spatial_segments.json", spatial_segments);
+  serialize_vector_rational_function<4, 2>(filepath+"planar_segments.json", planar_segments);
+  serialize_vector_segment_labels(filepath+"segment_labels.json", segment_labels);
+  serialize_vector_vector(filepath+"chains.csv", chains);
+  serialize_vector_int(filepath+"has_cusp_at_base.csv", has_cusp_at_base);
+
+
+
   AbstractCurveNetwork::SegmentIndex num_segments = spatial_segments.size();
 
   // Initialize segments without intersections
@@ -79,6 +237,37 @@ build_projected_curve_network_without_intersections(
       nodes.back().mark_as_path_end_node();
     }
   }
+
+
+  // ****************
+  // TESTING 
+  // ****************
+  // std::string filepath = "spot_control/projected_curve_network/build_projected_curve_network_without_intersections/";
+  serialize_vector_int(filepath+"to_array.csv", to_array);
+  serialize_vector_int(filepath+"out_array.csv", out_array);
+  serialize_vector_segment_geometry(filepath+"segments.json", segments);
+  serialize_vector_node_geometry(filepath+"nodes.json", nodes);
+
+
+  // std::ofstream output_file(filepath+"segments.csv", std::ios::out | std::ios::trunc);
+  // int prec = 17;
+  // // Print out by row order
+  // for (long unsigned int i = 0; i < segments.size(); ++i) {
+  //     // Printing out the first element of the row separately since we do not want the comma at the start
+  //     output_file << std::setprecision(prec) << segments.at(i) << "\n" << std::endl;
+  // }
+  // output_file << std::endl;
+  // output_file.close();
+
+
+  // std::ofstream output_file_2(filepath+"nodes.csv", std::ios::out | std::ios::trunc);
+  // // Print out by row order
+  // for (long unsigned int i = 0; i < nodes.size(); ++i) {
+  //     // Printing out the first element of the row separately since we do not want the comma at the start
+  //     output_file_2 << std::setprecision(prec) << nodes.at(i).formatted_node() << "\n";
+  // }
+  // output_file_2 << std::endl;
+  // output_file_2.close();
 }
 
 // Record the start of open chains and also mark an arbitrary node on each
@@ -90,6 +279,15 @@ mark_open_chain_endpoints(
   const std::vector<std::vector<int>>& chains,
   std::vector<NodeGeometry>& nodes)
 {
+  // 
+  // TESTING START
+  // 
+  std::string filepath = "spot_control/contour_network/projected_curve_network/mark_open_chain_endpoints/";
+  serialize_vector_int(filepath+"to_array.csv", to_array);
+  serialize_vector_int(filepath+"out_array.csv", out_array);
+  serialize_vector_node_geometry(filepath+"nodes_in.json", nodes);
+  serialize_vector_vector(filepath+"chains.csv", chains);
+
   // Build from array from the network topology
   std::vector<AbstractCurveNetwork::NodeIndex> from_array;
   build_from_array(to_array, out_array, from_array);
@@ -106,6 +304,11 @@ mark_open_chain_endpoints(
       nodes[end_node].mark_as_path_end_node();
     }
   }
+
+  // 
+  // MORE TESTING
+  // 
+  serialize_vector_node_geometry(filepath+"nodes_out.json", nodes);
 }
 
 // Helper function to split a given segment at a knot, updating the curve
@@ -176,6 +379,20 @@ remove_redundant_intersections(
   int num_intersections,
   std::vector<std::vector<IntersectionData>>& intersection_data)
 {
+  // 
+  // TESTING
+  // 
+  std::string filepath = "spot_control/contour_network/projected_curve_network/remove_redundant_intersections/";
+  serialize_vector_int(filepath+"to_array.csv", to_array);
+  serialize_vector_int(filepath+"out_array.csv", out_array);
+  std::ofstream output_file(filepath+"num_intersections.txt", std::ios::out | std::ios::trunc);
+  output_file << num_intersections << std::endl;
+  output_file.close();
+  serialize_intersection_data(filepath+"intersection_data_in.json", intersection_data);
+
+
+
+
   // Build map from intersection ids to their index in intersection data
   std::vector<std::vector<std::pair<size_t, size_t>>> intersection_segments(
     num_intersections);
@@ -275,6 +492,17 @@ remove_redundant_intersections(
       }
     }
   }
+
+  // ************************
+  // TESTING
+  // ************************
+  serialize_intersection_data(filepath+"intersection_data_out.json", intersection_data);
+
+
+  // SERIALIZING VANILLA JSON
+  // std::ofstream output_file_0(filepath+"num_intersections_out.txt", std::ios::out | std::ios::trunc);
+  // output_file_0 << num_intersections << std::endl;
+  // output_file_0.close();
 }
 
 // Split segments at all of the intersection points, and create maps from the
@@ -293,6 +521,20 @@ split_segments_at_intersections(
     split_segment_indices,
   std::vector<std::vector<AbstractCurveNetwork::NodeIndex>>& intersection_nodes)
 {
+  // 
+  // TESTING NEEDED RIGHT HERE
+  // 
+  std::string filepath = "spot_control/contour_network/projected_curve_network/split_segments_at_intersections/";
+  serialize_intersection_data(filepath+"intersection_data.json", intersection_data);
+  std::ofstream output_file(filepath+"num_intersections.txt");
+  output_file << num_intersections << std::endl;
+  output_file.close();
+  serialize_vector_int(filepath+"to_array_in.csv", to_array);
+  serialize_vector_int(filepath+"out_array_in.csv", out_array);
+  serialize_vector_segment_geometry(filepath+"segments_in.json", segments);
+  serialize_vector_node_geometry(filepath+"nodes_in.json", nodes);
+
+
   spdlog::info("Splitting segments at intersections");
   size_t num_segments = segments.size();
   size_t num_nodes = nodes.size();
@@ -425,6 +667,38 @@ split_segments_at_intersections(
     num_nodes,
     segments.size(),
     nodes.size());
+
+  // --------------
+  // TESTING
+  // --------------
+  // std::string filepath = "spot_control/contour_network/projected_curve_network/split_segments_at_intersections/";
+  serialize_vector_int(filepath+"to_array_out.csv", to_array);
+  serialize_vector_int(filepath+"out_array_out.csv", out_array);
+  serialize_vector_segment_geometry(filepath+"segments_out.json", segments);
+  serialize_vector_node_geometry(filepath+"nodes_out.json", nodes);
+
+  // std::ofstream output_file(filepath+"segments.csv", std::ios::out | std::ios::trunc);
+  // int prec = 17;
+  // // Print out by row order
+  // for (long unsigned int i = 0; i < segments.size(); ++i) {
+  //     // Printing out the first element of the row separately since we do not want the comma at the start
+  //     output_file << std::setprecision(prec) << segments.at(i) << "\n" << std::endl;
+  // }
+  // output_file << std::endl;
+  // output_file.close();
+
+  // std::ofstream output_file_2(filepath+"nodes.csv", std::ios::out | std::ios::trunc);
+  // // Print out by row order
+  // for (long unsigned int i = 0; i < nodes.size(); ++i) {
+  //     // Printing out the first element of the row separately since we do not want the comma at the start
+  //     output_file_2 << std::setprecision(prec) << nodes.at(i).formatted_node() << "\n";
+  // }
+  // output_file_2 << std::endl;
+  // output_file_2.close();
+
+  serialize_vector_int(filepath+"original_segment_indices.csv", original_segment_indices);
+  serialize_vector_vector(filepath+"split_segment_indices.csv", split_segment_indices);
+  serialize_vector_vector(filepath+"intersection_nodes.csv", intersection_nodes);
 }
 
 // Create a map from nodes to their corresponding intersection point if they are
@@ -442,6 +716,19 @@ connect_segment_intersections(
   std::vector<AbstractCurveNetwork::NodeIndex>& intersection_array,
   std::vector<NodeGeometry>& nodes)
 {
+  // 
+  // TESTING
+  // 
+  std::string filepath = "spot_control/contour_network/projected_curve_network/connect_segment_intersections/";
+  serialize_vector_vector(filepath+"intersection_nodes.csv", intersection_nodes);
+  serialize_vector_int(filepath+"intersection_array_in.csv", intersection_array);
+  serialize_vector_node_geometry(filepath+"nodes_in.json", nodes);
+
+  // 
+  // END OF TESTING
+  // 
+
+
   spdlog::info("Connecting segments intersections");
 
   // Initialize all intersection indices to -1
@@ -476,6 +763,23 @@ connect_segment_intersections(
         nodes[second_intersection_node].mark_as_intersection();
       }
     }
+
+
+    // ********************
+    // TESTING
+    // ********************
+    serialize_vector_int(filepath+"intersection_array_out.csv", intersection_array);
+    serialize_vector_node_geometry(filepath+"nodes_out.json", nodes);
+    // std::ofstream output_file_2(filepath+"nodes.csv", std::ios::out | std::ios::trunc);
+    // int prec = 17;
+    // // Print out by row order
+    // for (long unsigned int i = 0; i < nodes.size(); ++i) {
+    //     // Printing out the first element of the row separately since we do not want the comma at the start
+    //     output_file_2 << std::setprecision(prec) << nodes.at(i).formatted_node() << "\n";
+    // }
+    // output_file_2 << std::endl;
+    // output_file_2.close();
+
 
     return;
   }
@@ -547,6 +851,21 @@ split_segments_at_cusps(
   std::vector<SegmentGeometry>& segments,
   std::vector<NodeGeometry>& nodes)
 {
+  //
+  // TESTING BEGIN
+  // 
+  std::string filepath = "spot_control/contour_network/projected_curve_network/split_segments_at_cusps/";
+  serialize_vector_vector(filepath+"interior_cusps.csv", interior_cusps);
+  serialize_vector_int(filepath+"original_segment_indices_in.csv", original_segment_indices);
+  serialize_vector_vector(filepath+"split_segment_indices_in.csv", split_segment_indices);
+  serialize_vector_int(filepath+"to_array_in.csv", to_array);
+  serialize_vector_int(filepath+"out_array_in.csv", out_array);
+  serialize_vector_int(filepath+"intersection_array_in.csv", intersection_array);
+  serialize_vector_segment_geometry(filepath+"segments_in.csv", segments);
+  serialize_vector_node_geometry(filepath+"nodes_in.csv", nodes);
+
+
+
   spdlog::info("Splitting segments at cusps");
 
   size_t num_segments = segments.size();
@@ -631,7 +950,50 @@ split_segments_at_cusps(
       "Inconsistent number of intersections and nodes after cusps are split");
     return;
   }
+
+
+
+  // --------------
+  // TESTING
+  // --------------
+  serialize_vector_int(filepath+"original_segment_indices_out.csv", original_segment_indices);
+  serialize_vector_vector(filepath+"split_segment_indices_out.csv", split_segment_indices);
+  serialize_vector_int(filepath+"to_array_out.csv", to_array);
+  serialize_vector_int(filepath+"out_array_out.csv", out_array);
+  serialize_vector_int(filepath+"intersection_array_out.csv", intersection_array);
+  serialize_vector_segment_geometry(filepath+"segments_out.csv", segments);
+  serialize_vector_node_geometry(filepath+"nodes_out.csv", nodes);
+
+
+
+  // std::string filepath = "spot_control/contour_network/projected_curve_network/split_segments_at_cusps/";
+  // serialize_vector_int(filepath+"original_segment_indices.csv", original_segment_indices);
+  // serialize_vector_vector(filepath+"split_segment_indices.csv", split_segment_indices);
+  // serialize_vector_int(filepath+"to_array.csv", to_array);
+  // serialize_vector_int(filepath+"out_array.csv", out_array);
+  // serialize_vector_int(filepath+"intersection_array.csv", intersection_array);
+
+  // std::ofstream output_file(filepath+"segments.csv", std::ios::out | std::ios::trunc);
+  // int prec = 17;
+  // // Print out by row order
+  // for (long unsigned int i = 0; i < segments.size(); ++i) {
+  //     // Printing out the first element of the row separately since we do not want the comma at the start
+  //     output_file << std::setprecision(prec) << segments.at(i) << "\n" << std::endl;
+  // }
+  // output_file << std::endl;
+  // output_file.close();
+
+  // std::ofstream output_file_2(filepath+"nodes.csv", std::ios::out | std::ios::trunc);
+  // // Print out by row order
+  // for (long unsigned int i = 0; i < nodes.size(); ++i) {
+  //     // Printing out the first element of the row separately since we do not want the comma at the start
+  //     output_file_2 << std::setprecision(prec) << nodes.at(i).formatted_node() << "\n";
+  // }
+  // output_file_2 << std::endl;
+  // output_file_2.close();
 }
+
+
 
 /// @brief View a polygon with boolean function in polyscope
 void
@@ -692,7 +1054,13 @@ ProjectedCurveNetwork::ProjectedCurveNetwork(
   const std::vector<std::vector<size_t>>& intersection_indices,
   std::vector<std::vector<IntersectionData>>& intersection_data,
   int num_intersections)
-{
+{ 
+  // 
+  // TESTING
+  // 
+
+
+
   init_projected_curve_network(parameter_segments,
                                spatial_segments,
                                planar_segments,
@@ -1299,6 +1667,35 @@ ProjectedCurveNetwork::init_projected_curve_network(
   std::vector<std::vector<IntersectionData>>& intersection_data,
   int num_intersections)
 {
+  // 
+  // TESTING 
+  // Well, testing the arguments that are used to create ProjectedCurveNetwork
+  // 
+  std::string filepath = "spot_control/contour_network/projected_curve_network/init_projected_curve_network/";
+  serialize_vector_conic(filepath+"parameter_segments.json", parameter_segments);
+  serialize_vector_rational_function<4, 3>(filepath+"spatial_segments.json", spatial_segments);
+  serialize_vector_rational_function<4, 2>(filepath+"planar_segments.json", planar_segments);
+  serialize_vector_segment_labels(filepath+"segment_labels.json", segment_labels);
+  serialize_vector_vector(filepath+"chains.csv", chains);
+  serialize_vector_int(filepath+"chain_labels.csv", chain_labels);
+  serialize_vector_vector(filepath+"interior_cusps.csv", interior_cusps);
+  serialize_vector_int(filepath+"has_cusp_at_base.csv", has_cusp_at_base);
+  serialize_vector_vector(filepath+"intersections.csv", intersections);
+  serialize_vector_vector(filepath+"intersection_indices.csv", intersection_indices);
+  serialize_intersection_data(filepath+"intersection_data.json", intersection_data);
+  std::ofstream output_file(filepath+"num_intersections.txt", std::ios::out | std::ios::trunc);
+  output_file << std::to_string(num_intersections) << std::endl;
+  output_file.close();
+
+
+
+
+
+
+
+
+
+
   size_t num_segments = planar_segments.size();
   // size_t num_split_segments = num_segments + 2 * num_intersections; // FIXME
   // not correct with snapping and boundary
@@ -1429,6 +1826,13 @@ ProjectedCurveNetwork::init_projected_curve_network(
 void
 ProjectedCurveNetwork::init_chain_start_nodes()
 {
+  // 
+  // TESTING
+  // 
+  std::string filepath = "spot_control/contour_network/projected_curve_network/init_chain_start_nodes/";
+  serialize_vector_node_geometry(filepath+"nodes_in.json", m_nodes);
+
+
   size_t num_nodes = m_nodes.size();
 
   // Get all nodes that are special (and not path end nodes)
@@ -1452,6 +1856,7 @@ ProjectedCurveNetwork::init_chain_start_nodes()
       AbstractCurveNetwork::SegmentIndex start_si = out(ni);
       if (!is_valid_segment_index(start_si)) {
         spdlog::error("Start node is an end point");
+        std::cout << "TESTING" << std::endl;
         return;
       }
 
@@ -1476,6 +1881,23 @@ ProjectedCurveNetwork::init_chain_start_nodes()
       }
     }
   }
+
+  // ***************
+  // TESTING
+  // ***************
+  serialize_vector_int(filepath+"chain_start_nodes.csv", m_chain_start_nodes);
+  serialize_vector_node_geometry(filepath+"nodes_out.json", m_nodes);
+
+  // std::ofstream output_file_2(filepath+"nodes.csv", std::ios::out | std::ios::trunc);
+  // int prec = 17;
+  // // Print out by row order
+  // for (long unsigned int i = 0; i < m_nodes.size(); ++i) {
+  //     // Printing out the first element of the row separately since we do not want the comma at the start
+  //     output_file_2 << std::setprecision(prec) << m_nodes.at(i).formatted_node() << "\n";
+  // }
+  // output_file_2 << std::endl;
+  // output_file_2.close();
+
 }
 
 ProjectedCurveNetwork::SegmentChainIterator
@@ -2346,3 +2768,4 @@ ProjectedCurveNetwork::is_valid_projected_curve_network() const
 
   return true;
 }
+
