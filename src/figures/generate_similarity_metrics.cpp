@@ -111,6 +111,11 @@ int main(int argc, char *argv[]) {
     SpatialVector(0, 0, 0),
     true
   );
+  contour_network.write_rasterized_contours(
+    join_path(output_dir, "contours.png"),
+    SpatialVector(0, 0, -1),
+    SpatialVector(0, 0, 0)
+  );
   contour_network.write(
     join_path(output_dir, "full_contours.svg"),
     SVGOutputMode::contrast_invisible_segments,
