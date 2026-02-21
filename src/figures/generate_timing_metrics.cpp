@@ -123,6 +123,7 @@ int main(int argc, char *argv[]) {
   std::ofstream out_view_independent(join_path(output_dir, "view_independent.csv"),
                                      std::ios::app);
   out_view_independent << mesh_filename << "," 
+                       << camera_filename << ","
                        << F.rows() << ","
                        << spline_surface_time << ","
                        << compute_patch_boundary_time << "\n";
@@ -139,7 +140,7 @@ int main(int argc, char *argv[]) {
                 << "[" << rotation_frame.row(1) << "]" << " " 
                 << "[" << rotation_frame.row(2) << "]" << "," 
                 << z_distance << ","
-                << std::setprecision(6) << transformation_time << ","
+                << std::fixed << transformation_time << ","
                 << initial_contour_network_time << ","
                 << contour_network.surface_update_position_time << ","
                 << contour_network.compute_contour_time << ","
