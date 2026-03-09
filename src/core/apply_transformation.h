@@ -117,6 +117,18 @@ apply_transformation_to_vertices_in_place(
   MatrixXr& V,
   const Eigen::Matrix<double, 4, 4>& projective_transformation);
 
+
+/// Apply transformations to the control point grid and frame to align the view
+/// direction with the z axis, set viewing distances and angles, and send the
+/// camera to infinity.
+///
+/// @param[in] input_V: vertex matrix to normalize
+/// @param[out] output_V: normalized vertex matrix
+void 
+apply_normalization_to_vertices(
+  const MatrixXr& input_V,
+  Eigen::MatrixXd& output_V);
+
 /// Apply transformations to the control point grid and frame to align the view
 /// direction with the z axis, set viewing distances and angles, and send the
 /// camera to infinity.

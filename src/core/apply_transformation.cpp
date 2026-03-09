@@ -232,6 +232,28 @@ initialize_vertices(const MatrixXr& input_vertices,
     input_vertices, projective_transformation, output_vertices);
 }
 
+
+void apply_normalization_to_vertices(const MatrixXr& input_V,
+                                     Eigen::MatrixXd& output_V) 
+{
+  // Compute mesh midpoint and bounding box diagonal
+  SpatialVector min_point;
+  SpatialVector max_point;
+  compute_point_cloud_bounding_box(input_V, min_point, max_point);
+  SpatialVector mesh_midpoint = 0.5 * (max_point + min_point);
+  SpatialVector bounding_box_diagonal = max_point - min_point;
+  spdlog::info("Initial mesh bounding box: {}, {}", min_point, max_point);
+  spdlog::info("Initial mesh midpoint: {}", mesh_midpoint);
+
+  // Normalize the vertices
+  double scale_factor = bounding_box_diagonal.maxCoeff();
+  size_t num_vertices = input_V.rows();
+  output_V.resize(num_vertices, 3);
+  for (size_t i = 0; i < num_vertices; ++i) {
+    output_V.row(i) = 2.0 * (input_V.row(i) - mesh_midpoint) / scale_factor;
+  }
+}
+
 void
 apply_camera_frame_transformation_to_vertices(const MatrixXr& input_V,
                                               const Matrix3x3r& frame,
