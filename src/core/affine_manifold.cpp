@@ -631,6 +631,8 @@ AffineManifold::layout_next_vertex(const PlanarPoint& current_point,
   // Build the next point
   PlanarPoint next_point = a * p0 + b * p0_perp;
   assert(!vector_contains_nan(next_point));
+
+  // WARNING: below assert triggered in ASOC debug compiled version
   assert(float_equal(next_point.norm(), prev_edge_length));
   return next_point;
 }
