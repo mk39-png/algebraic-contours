@@ -63,6 +63,10 @@ int main(int argc, char *argv[]) {
   read_camera_matrix(camera_filename, camera_matrix);
   spdlog::info("Using camera matrix:\n{}", camera_matrix);
 
+  // Normalize the vertices
+  Eigen::MatrixXd V_copy = V;
+  apply_normalization_to_vertices(V_copy, V);
+
   // Apply camera and perspective projection transformations
   projection_matrix = origin_to_infinity_projective_matrix(camera_to_plane_distance);
   projection_matrix = projection_matrix * camera_matrix;
