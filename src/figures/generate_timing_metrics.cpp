@@ -58,19 +58,32 @@ int main(int argc, char *argv[]) {
   spdlog::set_level(spdlog::level::off);
 
   // Get input mesh
-  Eigen::MatrixXd initial_V, V, uv, N;
+  Eigen::MatrixXd V_initial, uv, N;
   Eigen::MatrixXi F, FT, FN;
-  igl::readOBJ(mesh_filepath_str, initial_V, uv, N, F, FT, FN);
+  igl::readOBJ(mesh_filepath_str, V_initial, uv, N, F, FT, FN);
 
   // Get camera matrix
   Eigen::Matrix<double, 4, 4> camera_matrix;
   read_camera_matrix(camera_filepath_str, camera_matrix);
   spdlog::info("Using camera matrix:\n{}", camera_matrix);
 
-  // Start timer for vertex transformation
+  // Start timer for vertex normalization.
+  Eigen::MatrixXd V_normalized = V_initial;
   igl::Timer timer;
   timer.start();
-  apply_transformation_to_vertices(initial_V, camera_matrix, V);
+  apply_normalization_to_vertices(V_initial, V_normalized);
+  double normalization_time = timer.getElapsedTime();
+  timer.stop();
+
+  // Start timer for vertex transformation
+  Eigen::MatrixXd V_transformed = V_normalized;
+  Eigen::Matrix<double, 4, 4>  projection_matrix;
+  double camera_to_plane_distance = 1.0;
+
+  timer.start();
+  projection_matrix = origin_to_infinity_projective_matrix(camera_to_plane_distance);
+  projection_matrix = projection_matrix * camera_matrix;
+  apply_transformation_to_vertices(V_normalized, projection_matrix, V_transformed);
   double transformation_time = timer.getElapsedTime();
   timer.stop();
 
@@ -87,7 +100,7 @@ int main(int argc, char *argv[]) {
       energy_hessian_inverse;
   AffineManifold affine_manifold(F, uv, FT);
   TwelveSplitSplineSurface spline_surface(
-      V, affine_manifold,
+      V_transformed, affine_manifold,
       optimization_params, face_to_patch_indices, patch_to_face_indices,
       fit_matrix, energy_hessian, energy_hessian_inverse);
 
@@ -119,6 +132,28 @@ int main(int argc, char *argv[]) {
   double initial_contour_network_time = timer.getElapsedTime();
   timer.stop();
 
+  // Start the timer for vector contour writing
+  // (this also helps with debugging it we got the correct contours in the end)
+  timer.start();
+  contour_network.write(
+    join_path(output_dir, "timing_vector_contours_"+mesh_filename+".svg"),
+    SVGOutputMode::contrast_invisible_segments,
+    true
+  );
+  double vector_contour_write_time = timer.getElapsedTime();
+  timer.stop();
+
+  // Start the timer for raster contour writing
+  timer.start();
+  contour_network.write_rasterized_contours(
+    join_path(output_dir, "timing_raster_contours_"+mesh_filename+".png"),
+    SpatialVector(0, 0, -1),
+    SpatialVector(0, 0, 0)
+  );
+  double raster_contour_write_time = timer.getElapsedTime();
+  timer.stop();
+
+
   // Write view independent timing data
   std::ofstream out_view_independent(join_path(output_dir, "view_independent.csv"),
                                      std::ios::app);
@@ -126,7 +161,8 @@ int main(int argc, char *argv[]) {
                        << camera_filename << ","
                        << F.rows() << ","
                        << spline_surface_time << ","
-                       << compute_patch_boundary_time << "\n";
+                       << compute_patch_boundary_time << ","
+                       << normalization_time << "\n";
                     
   // Write view dependent timing data
   std::ofstream out_per_view(join_path(output_dir, "per_view.csv"), std::ios::app);
@@ -153,7 +189,9 @@ int main(int argc, char *argv[]) {
                 << contour_network.boundary_cusp_number << ","
                 << contour_network.intersection_call << ","
                 << contour_network.ray_intersection_call << ","
-                << spline_surface.num_patches() << "\n";
+                << spline_surface.num_patches() << ","
+                << vector_contour_write_time << ","
+                << raster_contour_write_time << "\n";
 
   // Close output files
   out_per_view.close();
